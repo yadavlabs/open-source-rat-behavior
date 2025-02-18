@@ -43,7 +43,7 @@ For specific version see `docs\Software Versions.xlsx`
 1. Open command terminal.
 2. Activate environment:
 ```command
->cd cd path\to\environment\folder
+>cd path\to\environment\folder
 >behavior-chamber-env\Scripts\activate.bat
 ```
 3. Navigate to the directory containing the file "application.py" and run app:
