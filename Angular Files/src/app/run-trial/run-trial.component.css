@@ -1,0 +1,33 @@
+.cus-table {
+    /*
+        This designates the appearance of the cells of the table, which
+          is just aligning them in the center. Borders would be great to
+          increase separation between columns, but could not be figured
+          out.
+    */
+
+    text-align: center;    
+}
+
+.export-but {
+    /*
+        This designates the appearance of the export data button, which
+          was made different from the other buttons primarily for the
+          width.
+    */
+
+    width: 200px; /* fixes the width */
+    margin: 8px; /* adds margins on all four sides of the button */
+    height: 50px; /* fixes the height */
+}
+
+.cus-slide {
+    /*
+        This designates the appearance of the toggle sliders, which was
+          made to attempt to make them similar to the buttons.
+    */
+
+    width: 200px; /* fixes the width */
+    margin: 2px; /* adds margins on all four sides of the slider */
+    height: 35px; /* fixes the height */
+}

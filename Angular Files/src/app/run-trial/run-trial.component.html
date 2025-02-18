@@ -1,0 +1,187 @@
+<!--
+  This HTML file is responsible for the 3-column row of session control and feedback.
+    Each column will be explored in detail below to describe more function.
+-->
+
+<div class="row">
+  <!-- The entire component is contained within a row for easy display in the application -->
+
+  <div class="col-md-1">
+    <!--
+      SESSION BUTTONS -
+
+      This column contains the session control buttons - start, stop, pause, and randomize - that allows
+        the user to control the experiment in a basic way. These buttons and sliders are disabled at
+        select times of the experiment to avoid improper interactions (starting the experiment before
+        hardware is connected, etc.).
+    -->
+
+    <div class="card cus-card">
+      <h5 class="card-title" class="cus-card-header">Session Buttons</h5>
+
+      <!-- (1/4) START BUTTON: Allows the user to begin the experiment. -->
+      <button mat-raised-button
+        (click)="SessionButtonsPressed('start','Arduino')"
+        [disabled]="!(childFlags[0] && (childFlags[1] || childFlags[2]))"
+        class="cus-button">
+          Start
+      </button>
+
+      <!-- (2/4) STOP BUTTON: Allows the user to stop the experiment. -->
+      <button mat-raised-button
+        (click)="SessionButtonsPressed('stop','Arduino')"
+        [disabled]="!(childFlags[0] && (childFlags[1] || childFlags[2]))"
+        class="cus-button">
+          Stop
+      </button>
+
+      <!-- (3/4) PAUSE SLIDER: Allows the user to pause/unpause the experiment. -->
+      <mat-slide-toggle
+        (change)="onSlideChange('pause','Arduino',$event)"
+        [disabled]="!(childFlags[0] && (childFlags[1] || childFlags[2]))"
+        class="cus-slide">
+          {{pause_label}}
+      </mat-slide-toggle>
+
+      <!-- (4/4) RANDOMIZE SLIDER: Allows the user to randomize/unrandomize the experiment. -->
+      <mat-slide-toggle
+        (change)="onSlideChange('randomize','Arduino',$event)"
+        [disabled]="!(childFlags[0] && (childFlags[1] || childFlags[2]))"
+        class="cus-slide">
+          Randomize
+      </mat-slide-toggle>
+      
+    </div>
+  </div>
+
+  <div class="col-md-9">
+    <!--
+      CURRENT TRIAL DISPLAY TABLE -
+
+      This column is responsible for the display of data relevant to the current trial being performed.
+        The client-end application initializes the cells as "N/A", and the RESTful services initialize
+        the cells as "-" once the observable opens. That can be an indicator as to whether they are
+        working. When SSE send a new instance of the current trial data, the changes are reflected in
+        this table.
+    -->
+
+    <div class="card cus-card">
+      <h5 class="card-title" class="cus-card-header">Current Trial Data</h5>
+
+      <!-- (1/2) CURRENT TRIAL TABLE: Allows the user to see data relevant to the current trial. -->
+      <table class="table cus-table">
+        <!-- The header row -->
+        <thead> 
+          <th scope="col">Time (min)</th>
+          <th scope="col">Number</th>
+          <th scope="col">Type</th>
+          <th scope="col">Amplitude (uA)</th>
+          <th scope="col">Frequency (Hz)</th>
+          <th scope="col">CV</th>
+          <th scope="col">Forced</th>
+          <th scope="col">Response</th>
+          <th scope="col">Correct (%)</th>
+        </thead>
+        <!-- The data row -->
+        <tbody>
+          <td>{{childCurTrial.sess_time}}</td>
+          <td>{{childCurTrial.trial_n}}</td>
+          <td>{{childCurTrial.trial_type}}</td>
+          <td>{{childCurTrial.stim_A}}</td>
+          <td>{{childCurTrial.stim_fre}}</td>
+          <td>{{childCurTrial.CV}}</td>
+          <td>{{childCurTrial.forced}}</td>
+          <td>{{childCurTrial.trial_res}}</td>
+          <td>{{childCurTrial.per_cor}}</td>
+        </tbody>
+      </table>
+
+      <!-- (2/2) EXPORT DATA: Allows the user to export the data as an Excel file. -->
+      <button mat-raised-button
+        (click)="SessionButtonsPressed('export','N/A')"
+        class="export-but"
+        matTooltip={{ExpDataToolTip}}>
+          Export Data
+      </button>
+      
+    </div>
+  </div>
+
+  <div class="col-md-2">
+    <!--
+      MANUAL CONTROL BUTTONS AND SLIDERS -
+
+      This column is responsible for the buttons and sliders relevant to calibrate and test the system
+        before the experiment begins (before hitting "Start") or while the experiment is paused. Allows
+        the user a chance to see if the stimulator is working, if sensors are operational, etc.
+    -->
+
+    <div class="card cus-card">
+      <h5 class="card-title" class="cus-card-header">Manual Control Buttons</h5>
+
+      <!-- (1/8) TEST STIMULATOR BUTTON: Allows the user to test whether the stimulation is working. -->
+      <button mat-raised-button
+        (click)="SessionButtonsPressed('STIM','Gibson')"
+        [disabled]="!childFlags[1] || man_flag"
+        class="cus-button">
+          Test Stimulation
+      </button>
+
+      <!-- (2/8) LEFT DOOR TOGGLE: Allows the user to open and close the left door of the operant chamber. -->
+      <mat-slide-toggle
+        (change)="onSlideChange('left-door','Arduino',$event)"
+        [disabled]="!childFlags[0] || man_flag"
+        class="cus-slide">
+          Left Port Door
+      </mat-slide-toggle>
+
+      <!-- (3/8) RIGHT DOOR TOGGLE: Allows the user to open and close the right door of the operant chamber. -->
+      <mat-slide-toggle
+        (change)="onSlideChange('right-door','Arduino',$event)"
+        [disabled]="!childFlags[0] || man_flag"
+        class="cus-slide">
+          Right Port Door
+      </mat-slide-toggle>
+
+      <!-- (4/8) LEFT PORT FLUSH TOGGLE: Allows the user to test the reward system of the left port. -->
+      <mat-slide-toggle
+        (change)="onSlideChange('left-flush','Arduino',$event)"
+        [disabled]="!childFlags[0] || man_flag"
+        class="cus-slide">
+          Left Port Flush
+      </mat-slide-toggle>
+
+      <!-- (5/8) RIGHT PORT FLUSH TOGGLE: Allows the user to test the reward system of the right port. -->
+      <mat-slide-toggle
+        (change)="onSlideChange('right-flush','Arduino',$event)"
+        [disabled]="!childFlags[0] || man_flag"
+        class="cus-slide">
+          Right Port Flush
+      </mat-slide-toggle>
+
+      <!-- (6/8) HOUSE LIGHT TOGGLE: Allows the user to test whether the house light is on or off. -->
+      <mat-slide-toggle
+        (change)="onSlideChange('house-light','Arduino',$event)"
+        [disabled]="!childFlags[0] || man_flag"
+        class="cus-slide">
+          House Light
+      </mat-slide-toggle>
+
+      <!-- (7/8) BUZZER TOGGLE: Allows the user to test whether the buzzer is on or off. -->
+      <mat-slide-toggle
+        (change)="onSlideChange('buzzer','Arduino',$event)"
+        [disabled]="!childFlags[0] || man_flag"
+        class="cus-slide">
+          Buzzer
+      </mat-slide-toggle>
+
+      <!-- (8/8) TEST IR SENSOR TOGGLE: Allows the user to test whether the infrared (IR) beam-break sensors are working. -->
+      <mat-slide-toggle
+        (change)="onSlideChange('test-sensors','Arduino',$event)"
+        [disabled]="!childFlags[0] || man_flag"
+        class="cus-slide">
+          Test Sensors
+      </mat-slide-toggle>
+    </div>
+  </div>
+</div>

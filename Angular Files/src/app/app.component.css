@@ -1,0 +1,42 @@
+.cus-main-header {
+    /*
+        This designates the appearance of the main header on the application,
+          which, is in the app.component.html file and states the title and
+          author. Only modification present is adding padding to the left of
+          the text to read the words clearly.
+    */
+
+    margin-left: 12px; /* adds padding/margin to the left of the header text */
+}
+
+.cus-button {
+    /*
+        This designates the appearance of a majority of the buttons used in the
+          application. These styles aim to make the button fill the screen and
+          improve legibility.
+    */
+
+    width: stretch; /* stretches the width of the button to fit the space */
+    height: 50px; /* fixes the height of the button */
+    margin: 6px; /* adds a padding/margin around the button to increase clarity */
+}
+
+.cus-card-header {
+    /*
+        This designates the appearance of the headers in each bootstrap card,
+          which contains a majority of the UI's components. This also helps
+          provides better clarity to see what each card/section does.
+    */
+
+    margin: 4px; /* adds a margin/padding around the header text */
+}
+
+.cus-card {
+    /*
+        This designates the appearance of the bootstrap cards. All modifications
+          aim to increase clarity and separate the cards/spaces visually.
+    */
+
+    border-width: 4px; /* fixes the thickness of the border to a certain thickness */
+    width: stretch; /* stretches the width of the card to fit the space */
+}

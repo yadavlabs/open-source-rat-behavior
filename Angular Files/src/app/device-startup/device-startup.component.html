@@ -1,0 +1,390 @@
+<!--
+  This HTML file is responsible for the 4-column row of user configuration and viewport.
+    Each column will be explored in detail below to describe more function.
+-->
+
+<div class="row">
+  <!-- The entire component is contained within a row for easy display in the application -->
+
+  <div class="col-md-3">
+    <!--
+      DEVICE SETTINGS -
+
+      This column is responsible for letting the user connect the Arduino (microcontroller)
+        and Gibson (stimulator) via serial ports. The present HTML provides the selection
+        options and buttons for the user to interact with the application, but serial port
+        objects and processing is handled through the RESTful API (Flask).
+    -->
+
+    <div class="card cus-card">
+      <h5 class="card-title" class="cus-card-header">Serial Port Connections</h5>
+
+      <!-- (1/7) FIND PORTS BUTTON: Returns Arduino and Gibson COM ports for user to select. -->
+      <button mat-raised-button
+        (click)="RefreshPortListButtonPress()"
+        class="cus-button"
+        matTooltip={{FindPortToolTip}}>
+          Find Ports
+      </button>
+
+      <!-- (2/7) ARDUINO PORT SELECTION: User selects the desired Arduino COM port. -->
+      <mat-form-field
+        appearance="fill"
+        appearance="outline"
+        class="cus-form-field">
+
+          <mat-label>
+            Select Arduino Port
+          </mat-label>
+
+          <mat-select [(value)]="ardSelectedPort">
+            <mat-option
+              *ngFor="let port of ardPorts"
+              [value]="port.viewValue">
+                {{port.value}}
+            </mat-option>
+          </mat-select>
+
+      </mat-form-field>
+
+      <div class="row">
+        <!-- These buttons are closely related, so they are contained in the same row. -->
+
+        <div class="col-md-6">
+          <!-- (3a/7) CONNET ARDUINO BUTTON: Allows user to connect to the Arduino serial port. -->
+          <button mat-raised-button
+            (click)="ConnectDeviceButtonPress(ardBaudRate, ardSelectedPort, 'Arduino', 0)"
+            class="cus-button"
+            [disabled]="connectFlags[0]">
+              Connect Arduino
+          </button>
+        </div>
+
+        <div class="col-md-6">
+          <!-- (3b/7) DISCONNECT ARDUINO BUTTON: Allows user to disconnect the Arduino serial port. -->
+          <button mat-raised-button
+            (click)="DisconnectDeviceButtonPressed('Arduino', 0)"
+            class="cus-button"
+            [disabled]="!connectFlags[0]">
+              Disconnect Arduino
+          </button>
+        </div>
+
+      </div>
+
+      <!-- (4/7) GIBSON PORT SELECTION: User selects the desired Gibson COM port. -->
+      <mat-form-field
+        appearance="fill"
+        appearance="outline"
+        class="cus-form-field">
+
+          <mat-label>
+            Select Gibson Port
+          </mat-label>
+
+          <mat-select [(value)]="gibSelectedPort" [disabled]="connectFlags[2]">
+            <mat-option
+              *ngFor="let port of gibPorts"
+              [value]="port.viewValue">
+                {{port.value}}
+            </mat-option>
+          </mat-select>
+
+      </mat-form-field>
+
+      <div class="row">
+        <!-- These buttons are closely related, so they are contained in the same row. -->
+
+        <div class="col-md-6">
+          <!-- (5a/7) CONNECT GIBSON BUTTON: Allows the user to connect to the Gibson serial port. -->
+          <button mat-raised-button
+            (click)="ConnectDeviceButtonPress(gibBaudRate, gibSelectedPort, 'Gibson', 1)"
+            class="cus-button"
+            [disabled]="(connectFlags[1] || connectFlags[2])">
+              Connect Gibson
+          </button>
+        </div>
+
+        <div class="col-md-6">
+          <!-- (5b/7) DISCONNET GIBSON BUTTON: Allows the user to disconnect the Gibson serial port. -->
+          <button mat-raised-button
+            (click)="DisconnectDeviceButtonPressed('Gibson', 1)"
+            class="cus-button"
+            [disabled]="!connectFlags[1]">
+              Disconnect Gibson
+          </button>
+        </div>
+      </div>
+
+      <div class="row">
+        <!-- These buttons are closely related, so they are contained in the same row. -->
+
+        <div class="col-md-6">
+          <!-- (6a/7) UPDATE SESSION PARAMETERS BUTTON: Allows the user to update session parameters used by the Arduino. -->
+          <button mat-raised-button
+            (click)="UpdateParamsButtonPressed('Session')"
+            class="cus-button">
+              Update Session Parameters
+          </button>
+        </div>
+
+        <div class="col-md-6">
+          <!-- (6b/7) UPDATE STIMULATOR PARAMETERS BUTTON: Allows the user to update stimulator parameters used by the Gibson. -->
+          <button mat-raised-button
+            (click)="UpdateParamsButtonPressed('Stimulator')"
+            class="cus-button">
+              Update Stimulation Parameters
+          </button>
+        </div>
+      </div>
+
+      <div class="row">
+        <!-- These buttons are closely related, so they are contained in the same row. -->
+
+        <div class="col-md-6">
+          <!-- (7a/7) IMPORT PARAMETERS BUTTON: Allows the user to import multi-session experimental progress. -->
+          <button mat-raised-button
+            (click)="UpdateParamsButtonPressed('import')"
+            class="cus-button"
+            matTooltip={{ImportToolTip}}>
+              Import Parameters
+          </button>
+        </div>
+
+        <div class="col-md-6">
+          <!-- (7b/7) EXPORT PARAMETERS BUTTON: Allows user to export loaded parameters into *.cvs/*.xlsx file -->
+          <button mat-raised-button
+            (click)="UpdateParamsButtonPressed('export')"
+            class="cus-button"
+            matTooltip={{ExportToolTip}}>
+              Export Parameters
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <!--
+      SESSION SETTINGS -
+
+      This column is responsible for displaying and handling the session settings, which
+        are parameters that the user defines and are ultimately used by the Arduino for
+        the experimental protocol.
+      Selections (Session Type and Experiment Type) in this column can disable form fields
+        elsewhere (particular CVs, stimulator settings, upload parameter buttons, etc.) to
+        better guide the user as to what fields are required for certain protocol to work.
+    -->
+
+    <div class="card cus-card">
+      <h5 class="card-title" class="cus-card-header">Session Parameters</h5>
+
+      <!-- (1/6) SESSION TYPE SELECTION: Allows the user to select the desired session type. -->
+      <mat-form-field
+        appearance="fill"
+        class="cus-form-field">
+
+          <mat-label>
+            Select Session Type
+          </mat-label>
+
+          <mat-select
+            [(value)]="sess_type2"
+            (selectionChange)="onSessChange(sess_type2)">
+              <mat-option
+                *ngFor="let type of exp_type2"
+                [value]="type">
+                  {{type}}
+              </mat-option>
+          </mat-select>
+
+      </mat-form-field>
+
+      <!-- (2/6) EXPERIMENT TYPE SELECTION: Allows the user to select the desired experimental protocol. -->
+      <mat-form-field
+        appearance="fill"
+        class="cus-form-field"
+        matTooltip={{ExpTypeToolTip}}>
+
+          <mat-label>
+            Select Experiment
+          </mat-label>
+
+          <mat-select
+            [(value)]="sess_type1"
+            (selectionChange)="onSessTypeChange(sess_type1)">
+              <mat-option
+                *ngFor="let type of exp_type1"
+                [value]="type">
+                  {{type}}
+              </mat-option>
+          </mat-select>
+
+      </mat-form-field>
+
+      <!-- (3/6) SESSION LENGTH FORM FIELD: Allows the user to input the desired length of the session. -->
+      <mat-form-field class="cus-form-field">
+        <mat-label>
+          Enter Session Length (min)
+        </mat-label>
+
+        <input matInput [formControl]="sess_len">
+      </mat-form-field>
+
+      <!-- (4/6) SESSION RESPONSE TIME FORM FIELD: Allows the user to input the desired subject response time. -->
+      <mat-form-field class="cus-form-field">
+        <mat-label>
+          Enter Session Response Time (s)
+        </mat-label>
+
+        <input matInput [formControl]="sess_res_t">
+      </mat-form-field>
+
+      <!-- (5/6) FORCED TRIAL SELECTION: Allows the user to select whether the session will be forced or not. -->
+      <mat-form-field appearance="fill" class="cus-form-field">
+        <mat-label>
+          Is This Trial Forced? (Y/N)
+        </mat-label>
+
+        <mat-select [(value)]="forced_type">
+          <mat-option
+            *ngFor="let yn of forced_q"
+            [value]="yn">
+              {{yn}}
+          </mat-option>
+        </mat-select>
+
+      </mat-form-field>
+
+      <!-- (6/6) SESSION CONSECUTIVE ERROR FORM FIELD: Allows the user to input the amount of consecutive errors for the subject. -->
+      <mat-form-field class="cus-form-field">
+        <mat-label>
+          Enter Consecutive Error Amount
+        </mat-label>
+
+        <input matInput [formControl]="sess_conerr">
+      </mat-form-field>
+
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <!--
+      STIMULATOR SETTINGS -
+
+      This column is responsible for displaying and handling the stimulator settings, which
+        are parameters that the user defines and are ultimately used by the Gibson for the
+        experimental protocol.
+    -->
+    <div class="card cus-card" [formGroup]="stim_form">
+      <h5 class="card-title" class="cus-card-header">Stimulator Parameters</h5>
+
+      <!-- (1/7) STIMULUS AMPLITUDE FORM FIELD: Allows the user to input the desired amplitude of the stimulus. -->
+      <mat-form-field class="cus-form-field">
+        <mat-label>
+          Enter Stimulus Amplitude (uA)
+        </mat-label>
+
+        <input matInput formControlName="stim_A">
+      </mat-form-field>
+
+      <!-- (2/7) STIMULUS FREQUENCY FORM FIELD: Allows the user to input the desired frequency of the stimulus. -->
+      <mat-form-field class="cus-form-field">
+        <mat-label>
+          Enter Stimulus Frequency (Hz)
+        </mat-label>
+
+        <input matInput formControlName="stim_fre">
+      </mat-form-field>
+
+      <!-- (3/7) STIMULUS PULSE WIDTH FORM FIELD: Allows the user to input the desired pulse width of the stimulus. -->
+      <mat-form-field class="cus-form-field">
+        <mat-label>
+          Enter Stimulus Pulse Width (us)
+        </mat-label>
+
+        <input matInput formControlName="stim_width">
+      </mat-form-field>
+
+      <!-- (4/7) STIMULUS INTER-PHASE INTERVAL FORM FIELD: Allows the user to input the desired inter-phase interval of the stimulus. -->
+      <mat-form-field class="cus-form-field">
+        <mat-label>
+          Enter Stimulus Inter-Phase Interval (us)
+        </mat-label>
+
+        <input matInput formControlName="stim_interval">
+      </mat-form-field>
+
+      <!-- (5/7) STIMULUS PULSE NUMBER FORM FIELD: Allows the user to input the desired number of pulses for the stimulus. -->
+      <mat-form-field class="cus-form-field">
+        <mat-label>
+          Enter Stimulus Pulse Number
+        </mat-label>
+
+        <input matInput formControlName="stim_pulNum">
+      </mat-form-field>
+
+      <!-- (6/7) DETECTION SESSION CV FORM FIELD: Allows the user to input the desired CV for a detection experiment. -->
+      <mat-form-field class="cus-form-field">
+        <mat-label>
+          Enter Session CV
+        </mat-label>
+
+        <input matInput formControlName="sess_cv">
+      </mat-form-field>
+
+      <div class="row">
+        <!-- These form fields are closely related, so they are contained in the same row. -->
+
+        <div class="col-md-6">
+          <!-- (7a/7) LEFT PORT CV FORM FIELD: Allows the user to input the desired left port CV for a discrimination experiment. -->
+          <mat-form-field class="cus-form-field">
+            <mat-label>
+              Enter Left Port CV
+            </mat-label>
+
+            <input matInput formControlName="sess_cvL">
+          </mat-form-field>
+        </div>
+
+        <div class="col-md-6">
+          <!-- (7b/7) RIGHT PORT CV FORM FIELD: Allows the user to input the desired right port CV for a discrimination experiment. -->
+          <mat-form-field class="cus-form-field">
+            <mat-label>
+              Enter Right Port CV
+            </mat-label>
+
+            <input matInput formControlName="sess_cvR">
+          </mat-form-field>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <!--
+      SCROLLABLE VIEWPORT -
+
+      This column is responsible for the viewport that displays the strings that originate
+        from the Arduino and Gibson (active serial ports) through print statements that an
+        observable (in the sse.service.ts file) monitors and emits. Auto-scolling is featured
+        in this viewport.
+    -->
+    <div
+      id="viewPort"
+      class="overflow-y-scroll example-viewport">
+    </div>
+  </div>
+</div>
+
+<!--
+  Rather than display the app-run-trial component in the app.component.html file, it's being
+    displayed here to take advantage of an inheritence relationship to let variables in the
+    child component (app-run-trial) use variables in the parent component (app-device-startup).
+
+  Flags (connectFlags) are being sent to the child to use in button enabling/disabling, and the
+    current trial data (staticSessData) is being sent to the child to display in a table.
+-->
+<app-run-trial [childFlags]="connectFlags" [childCurTrial]="staticSessData"></app-run-trial>
