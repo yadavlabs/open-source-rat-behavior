@@ -51,7 +51,7 @@ For specific version see `docs\Software Versions.xlsx`
 >cd path\to\open-source-operant-chamber-control\Flask Project Files\pythonBackend
 >flask run
 ```
-Note: You don't need to open the URL (e.g. `http://127.0.0.1:5000), but you can if you want
+Note: You don't need to open the URL (e.g. `http://127.0.0.1:5000`), but you can if you want
 
 
 ## Launch Angular App
