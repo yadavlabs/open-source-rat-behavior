@@ -247,6 +247,7 @@ def ArduinoSetUpFunctions():
 	"""
 	if (request.form["task"] == "updateParams"):
 		#
+		print(ard.is_open)
 		paramType = request.form["paramType"]
 		#print(request.form["paramType"])
 		params = request.form["params"].split(',')
@@ -268,7 +269,7 @@ def ArduinoSetUpFunctions():
 		return {"task":request.form["task"], "message":"return", "output":[]}
 
 	if (request.form["task"] == "paramsImpExp"):
-
+		# To implement
 		return {"task":request.form["task"], "message":"return", "output":[]}
 		
 

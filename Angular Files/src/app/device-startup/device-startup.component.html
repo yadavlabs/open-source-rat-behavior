@@ -123,7 +123,8 @@
           <!-- (6a/7) UPDATE SESSION PARAMETERS BUTTON: Allows the user to update session parameters used by the Arduino. -->
           <button mat-raised-button
             (click)="UpdateParamsButtonPressed('Session')"
-            class="cus-button">
+            class="cus-button"
+            [disabled]="!connectFlags[0]">
               Update Session Parameters
           </button>
         </div>
@@ -132,7 +133,8 @@
           <!-- (6b/7) UPDATE STIMULATOR PARAMETERS BUTTON: Allows the user to update stimulator parameters used by the Gibson. -->
           <button mat-raised-button
             (click)="UpdateParamsButtonPressed('Stimulator')"
-            class="cus-button">
+            class="cus-button"
+            [disabled]="!connectFlags[1]">
               Update Stimulation Parameters
           </button>
         </div>
