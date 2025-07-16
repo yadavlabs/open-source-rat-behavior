@@ -74,6 +74,7 @@
 
       <!-- (4/7) GIBSON PORT SELECTION: User selects the desired Gibson COM port. -->
       <mat-form-field
+        *ngIf="isStimulatorVisible"
         appearance="fill"
         appearance="outline"
         class="cus-form-field">
@@ -95,7 +96,7 @@
       <div class="row">
         <!-- These buttons are closely related, so they are contained in the same row. -->
 
-        <div class="col-md-6">
+        <div *ngIf="isStimulatorVisible", class="col-md-6">
           <!-- (5a/7) CONNECT GIBSON BUTTON: Allows the user to connect to the Gibson serial port. -->
           <button mat-raised-button
             (click)="ConnectDeviceButtonPress(gibBaudRate, gibSelectedPort, 'Gibson', 1)"
@@ -104,8 +105,11 @@
               Connect Gibson
           </button>
         </div>
+        
 
-        <div class="col-md-6">
+        <div 
+        *ngIf="isStimulatorVisible"
+         class="col-md-6">
           <!-- (5b/7) DISCONNET GIBSON BUTTON: Allows the user to disconnect the Gibson serial port. -->
           <button mat-raised-button
             (click)="DisconnectDeviceButtonPressed('Gibson', 1)"
@@ -129,7 +133,9 @@
           </button>
         </div>
 
-        <div class="col-md-6">
+        <div 
+        *ngIf="isStimulatorVisible"
+         class="col-md-6">
           <!-- (6b/7) UPDATE STIMULATOR PARAMETERS BUTTON: Allows the user to update stimulator parameters used by the Gibson. -->
           <button mat-raised-button
             (click)="UpdateParamsButtonPressed('Stimulator')"
@@ -246,7 +252,7 @@
       <!-- (5/6) FORCED TRIAL SELECTION: Allows the user to select whether the session will be forced or not. -->
       <mat-form-field appearance="fill" class="cus-form-field">
         <mat-label>
-          Is This Trial Forced? (Y/N)
+          Enable Forced Trials (Y/N)
         </mat-label>
 
         <mat-select [(value)]="forced_type">
@@ -285,14 +291,16 @@
       <!-- (1/7) STIMULUS AMPLITUDE FORM FIELD: Allows the user to input the desired amplitude of the stimulus. -->
       <mat-form-field class="cus-form-field">
         <mat-label>
-          Enter Stimulus Amplitude (uA)
+          {{ stim_label_1_name }}
         </mat-label>
 
-        <input matInput formControlName="stim_A">
+        <input matInput [formControlName]=stim_val_1_name>
       </mat-form-field>
 
       <!-- (2/7) STIMULUS FREQUENCY FORM FIELD: Allows the user to input the desired frequency of the stimulus. -->
-      <mat-form-field class="cus-form-field">
+      <mat-form-field 
+      *ngIf="isStimulatorVisible"
+       class="cus-form-field">
         <mat-label>
           Enter Stimulus Frequency (Hz)
         </mat-label>
@@ -301,7 +309,9 @@
       </mat-form-field>
 
       <!-- (3/7) STIMULUS PULSE WIDTH FORM FIELD: Allows the user to input the desired pulse width of the stimulus. -->
-      <mat-form-field class="cus-form-field">
+      <mat-form-field 
+      *ngIf="isStimulatorVisible"
+       class="cus-form-field">
         <mat-label>
           Enter Stimulus Pulse Width (us)
         </mat-label>
@@ -310,7 +320,9 @@
       </mat-form-field>
 
       <!-- (4/7) STIMULUS INTER-PHASE INTERVAL FORM FIELD: Allows the user to input the desired inter-phase interval of the stimulus. -->
-      <mat-form-field class="cus-form-field">
+      <mat-form-field 
+      *ngIf="isStimulatorVisible"
+       class="cus-form-field">
         <mat-label>
           Enter Stimulus Inter-Phase Interval (us)
         </mat-label>
@@ -319,7 +331,9 @@
       </mat-form-field>
 
       <!-- (5/7) STIMULUS PULSE NUMBER FORM FIELD: Allows the user to input the desired number of pulses for the stimulus. -->
-      <mat-form-field class="cus-form-field">
+      <mat-form-field 
+      *ngIf="isStimulatorVisible"
+       class="cus-form-field">
         <mat-label>
           Enter Stimulus Pulse Number
         </mat-label>
@@ -330,10 +344,10 @@
       <!-- (6/7) DETECTION SESSION CV FORM FIELD: Allows the user to input the desired CV for a detection experiment. -->
       <mat-form-field class="cus-form-field">
         <mat-label>
-          Enter Session CV
+          {{ stim_label_2_name }}
         </mat-label>
 
-        <input matInput formControlName="sess_cv">
+        <input matInput [formControlName]=stim_val_2_name>
       </mat-form-field>
 
       <div class="row">
@@ -343,10 +357,10 @@
           <!-- (7a/7) LEFT PORT CV FORM FIELD: Allows the user to input the desired left port CV for a discrimination experiment. -->
           <mat-form-field class="cus-form-field">
             <mat-label>
-              Enter Left Port CV
+              Enter Left Port {{ stim_label_3_name}}
             </mat-label>
 
-            <input matInput formControlName="sess_cvL">
+            <input matInput [formControlName]=stim_val_3_name>
           </mat-form-field>
         </div>
 
@@ -354,10 +368,10 @@
           <!-- (7b/7) RIGHT PORT CV FORM FIELD: Allows the user to input the desired right port CV for a discrimination experiment. -->
           <mat-form-field class="cus-form-field">
             <mat-label>
-              Enter Right Port CV
+              Enter Right Port {{ stim_label_3_name }}
             </mat-label>
 
-            <input matInput formControlName="sess_cvR">
+            <input matInput [formControlName]=stim_val_4_name>
           </mat-form-field>
         </div>
       </div>

@@ -9,7 +9,7 @@ import { SSEService } from './sse.service';
 // Importing interfaces
 import { postDic } from '../postDic';
 import { DropDownInfo } from './DropDownInfo';
-import { CurrentTrialData } from './CurrentTrialData';
+import { CurrentTrialDataEle, CurrentTrialDataAuditory } from './CurrentTrialData';
 
 
 @Component({
@@ -22,6 +22,30 @@ import { CurrentTrialData } from './CurrentTrialData';
 export class DeviceStartupComponent {
   constructor(private flaskService: FlaskService, public sseService: SSEService) {
     // The following methods are used for initialization of selection values, which are defined below
+    if(this.isStimulatorVisible == false) {
+      console.log(typeof DeviceStartupComponent.parentCurTrial)
+
+      DeviceStartupComponent.parentCurTrial = DeviceStartupComponent.parentCurTrialAuditory;
+      this.stim_label_1_name = "Enter Tone Duration (ms)";
+      this.stim_label_2_name = "Choose Tone Frequency (High/Low)";
+      this.stim_label_3_name = "Tone";
+      this.stim_val_1_name = "stim_duration";
+      this.stim_val_2_name = "sess_tone";
+      this.stim_val_3_name = "sess_toneL";
+      this.stim_val_4_name = "sess_toneR";
+      console.log(this.stim_val_1_name)
+      this.exp_type2 = ["Initial Training", "Auditory Experiment"];
+      //this.stim_form = this.stim_form_auditory;
+      this.stim_form.get('stim_A')?.setValue('500');
+      this.stim_form.get('sess_cv')?.setValue(this.stim_form.get('sess_tone').value);
+      this.onSessChange = this.onSessChangeAud;
+      this.onSessTypeChange = this.onSessTypeChangeAud;
+    } else {
+      //this.stim_form = this.stim_form_ele;
+      DeviceStartupComponent.parentCurTrial = DeviceStartupComponent.parentCurTrialEle;
+      this.onSessChange = this.onSessChangeStim;
+      this.onSessTypeChange = this.onSessTypeChangeStim;
+    }
     this.onSessChange(this.sess_type2)
     this.onSessTypeChange(this.sess_type1)
   }
@@ -34,7 +58,9 @@ export class DeviceStartupComponent {
 
   // Functionality variables
   inc_data: any; // Used with the SSEService BehaviorSubject observable subscription
-  static parentCurTrial: CurrentTrialData = {
+  
+  static parentCurTrial: object = {}; // This will be the dictionary of current trial data, initialized as an empty object
+  static parentCurTrialEle: CurrentTrialDataEle = {
       sess_time: 'N/A',
       trial_n: 'N/A',
       trial_type: 'N/A',
@@ -46,6 +72,17 @@ export class DeviceStartupComponent {
       per_cor: 'N/A'
   }; // This will be the dictionary of current trial data
 
+  static parentCurTrialAuditory: CurrentTrialDataAuditory = {
+      sess_time: 'N/A',
+      trial_n: 'N/A',
+      trial_type: 'N/A',
+      stim_duration: 'N/A',
+      tone_freq: 'N/A',
+      forced: 'N/A',
+      trial_res: 'N/A',
+      per_cor: 'N/A'
+  }; // This will be the dictionary of current trial data for auditory experiments
+
   // Flags
   connectFlags = [
     false, // Arduino Connect Flag (true when connected, false when disconnected)
@@ -53,6 +90,7 @@ export class DeviceStartupComponent {
     false // Initial Training Flag (true when selected, false when not selected)
   ];
   observeOpenFlag = false; // flag for when the observable is opened
+  isStimulatorVisible = false; // flag for visibility of the Gibson stimulator parameters, set to false for auditory experiment
 
   // POST Responses
   COM_res: postDic = { task: "initalize", message: "initialize", output: "initialize" };
@@ -72,6 +110,7 @@ export class DeviceStartupComponent {
   ardBaudRate = 9600; // Arduino baud rate (it also won't change)
 
   // Session variables
+
   exp_type2 = ["Initial Training", "CV Experiment"];
   sess_type2: string = "Initial Training";
   exp_type1 = ["Discrimination", "Detection"];
@@ -84,6 +123,15 @@ export class DeviceStartupComponent {
   SESS_params: any;
 
   // Stimulator variables
+  stim_label_1_name = "Enter Stimulus Amplitude (uA)";
+  stim_label_2_name = "Enter Session CV";
+  stim_label_3_name = "CV";
+  stim_val_1_name = "stim_A";
+  stim_val_2_name = "sess_cv";
+  stim_val_3_name = "sess_cvL";
+  stim_val_4_name = "sess_cvR";
+
+  //stim_form: FormGroup;
   stim_form = new FormGroup({
     stim_A: new FormControl({ value: '200', disabled: false }),
     stim_fre: new FormControl({ value: '50', disabled: false }),
@@ -92,8 +140,18 @@ export class DeviceStartupComponent {
     sess_cvR: new FormControl({ value: '', disabled: false }),
     stim_width: new FormControl({ value: '200', disabled: false }),
     stim_interval: new FormControl({ value: '50', disabled: false }),
-    stim_pulNum: new FormControl({ value: '100', disabled: false })
-  })
+    stim_pulNum: new FormControl({ value: '100', disabled: false }),
+    stim_duration: new FormControl({ value: '500', disabled: false }),
+    sess_tone: new FormControl({ value: 'High', disabled: false }),
+    sess_toneL: new FormControl({ value: 'High', disabled: false }),
+    sess_toneR: new FormControl({ value: 'Low', disabled: false })
+  });
+
+  //stim_form_auditory = new FormGroup({
+  //      stim_duration: new FormControl({ value: '500', disabled: false }),
+  //      sess_toneL: new FormControl({ value: '', disabled: false }),
+  //      sess_toneR: new FormControl({ value: '', disabled: false })
+  //});
   STIM_params: any;
 
 
@@ -118,6 +176,7 @@ export class DeviceStartupComponent {
     */
 
     // Initiates the POST request to open the serial port
+   
     this.flaskService.openCOMs(baudRate, selectedPort, device).subscribe(data => {
       this.COM_res = data, // captures return response
       this.connectFlags[flag] = this.flaskService.checkConnect(data["message"]), // changes button flags based on response
@@ -129,6 +188,8 @@ export class DeviceStartupComponent {
       this.sseService.startCOMS().subscribe(x => { this.inc_data = x });
       this.observeOpenFlag = true;
     }
+    console.log(this.observeOpenFlag)
+    console.log(this.connectFlags[flag])
   }
 
 
@@ -171,16 +232,25 @@ export class DeviceStartupComponent {
     if (paramType == "Stimulator") {
 
       // Updates the values of the STIM_params, based on user inputs that have changed since initialization
-      this.STIM_params = [
-        this.stim_form.get('stim_A').value, // Stimulus Amplitude (uA)
-        this.stim_form.get('stim_fre').value, // Stimulus Frequency (Hz)
-        this.stim_form.get('stim_width').value, // Stimulus Pulse Width (us)
-        this.stim_form.get('stim_interval').value, // Stimulus Inter-Phase Interval (us)
-        this.stim_form.get('stim_pulNum').value, // Stimulus Number of Pulses (n)
-        this.stim_form.get('sess_cv').value, // Detection CV
-        this.stim_form.get('sess_cvL').value, // Discrimination CV - Left Port
-        this.stim_form.get('sess_cvR').value // Discrimination CV - Right Port
-      ];
+      if (this.isStimulatorVisible) {
+        this.STIM_params = [
+          this.stim_form.get('stim_A').value, // Stimulus Amplitude (uA)
+          this.stim_form.get('stim_fre').value, // Stimulus Frequency (Hz)
+          this.stim_form.get('stim_width').value, // Stimulus Pulse Width (us)
+          this.stim_form.get('stim_interval').value, // Stimulus Inter-Phase Interval (us)
+          this.stim_form.get('stim_pulNum').value, // Stimulus Number of Pulses (n)
+          this.stim_form.get('sess_cv').value, // Detection CV
+          this.stim_form.get('sess_cvL').value, // Discrimination CV - Left Port
+          this.stim_form.get('sess_cvR').value // Discrimination CV - Right Port
+        ];
+      }
+      else {
+        this.STIM_params = [
+          this.stim_form.get('stim_duration').value, // Stimulus Duration (ms)
+          this.stim_form.get('sess_toneL').value, // Detection Tone - Left Port
+          this.stim_form.get('sess_toneR').value // Detection Tone - Right Port
+        ];
+      }
 
       // The POST request itself, which captures the return response
       this.flaskService.updateParams(this.STIM_params, paramType).subscribe(x => { this.STIM_res = x });
@@ -226,8 +296,9 @@ export class DeviceStartupComponent {
     return DeviceStartupComponent.parentCurTrial;
   }
   
+  onSessChange: (selValue: any) => void;
 
-  onSessChange(selValue: any) {
+  onSessChangeStim(selValue: any) {
     /*
       This function is responsible for handling a change event of the Session Type selection.
         Conditions are checked as to the value selected, which determines which fields are
@@ -276,8 +347,52 @@ export class DeviceStartupComponent {
     }
   }
 
+  onSessChangeAud(selValue: any) {
+    if (selValue == "Initial Training") {
+      this.connectFlags[2] = true; // changes the Initial Training flag for buttons/sliders
+      console.log("Initial Training selected");
+      // changes the properties of select form fields
+      this.stim_form.get('stim_duration')?.disable();
+      //this.stim_form.get('stim_fre')?.disable();
+      this.stim_form.get('sess_tone')?.disable();
+      this.stim_form.get('sess_toneL')?.disable();
+      this.stim_form.get('sess_toneR')?.disable();
+      //this.stim_form.get('stim_width')?.disable();
+      //this.stim_form.get('stim_interval')?.disable();
+      //this.stim_form.get('stim_pulNum')?.disable();
+      if (this.connectFlags[1] == true) {
+        this.flaskService.closeCOMs("Gibson").subscribe(x => {
+          this.COM_res = x,
+          this.connectFlags[1] = false
+        });
+      }
+    }
+    else {
+      this.connectFlags[2] = false; // changes the Initial Training flag for buttons/sliders
 
-  onSessTypeChange(selValue: any) {
+      // changes the properties of select form fields
+      this.stim_form.get('stim_duration')?.enable();
+      //this.stim_form.get('stim_fre')?.enable();
+      //this.stim_form.get('stim_width')?.enable();
+      //this.stim_form.get('stim_interval')?.enable();
+      //this.stim_form.get('stim_pulNum')?.enable();
+
+      // checks which experiment type is selected, if any, to enable/disable correctly
+      if (this.sess_type1 != "Initialize") {
+        this.onSessTypeChange(this.sess_type1);
+      }
+      else {
+        this.stim_form.get('sess_tone')?.enable();
+        this.stim_form.get('sess_toneL')?.enable();
+        this.stim_form.get('sess_toneR')?.enable();
+      }
+    }
+
+
+  }
+  onSessTypeChange: (selValue: any) => void;
+
+  onSessTypeChangeStim(selValue: any) {
     /*
       This function is responsible for handling a change event of the Experiment Type selection.
         Conditions are checked as to the value selected, which determines which fields are enabled
@@ -293,6 +408,25 @@ export class DeviceStartupComponent {
       this.stim_form.get('sess_cv')?.disable();
       this.stim_form.get('sess_cvL')?.enable();
       this.stim_form.get('sess_cvR')?.enable();
+    }
+  }
+
+  onSessTypeChangeAud(selValue: any) {
+    /*
+      This function is responsible for handling a change event of the Experiment Type selection.
+        Conditions are checked as to the value selected, which determines which fields are enabled
+        or disabled through directly changing properties of the form fields.
+    */
+
+    if (selValue == "Detection" && this.connectFlags[2] == false) {
+      this.stim_form.get('sess_tone')?.enable();
+      this.stim_form.get('sess_toneL')?.disable();
+      this.stim_form.get('sess_toneR')?.disable();
+    }
+    if (selValue == "Discrimination" && this.connectFlags[2] == false) {
+      this.stim_form.get('sess_tone')?.disable();
+      this.stim_form.get('sess_toneL')?.enable();
+      this.stim_form.get('sess_toneR')?.enable();
     }
   }
 

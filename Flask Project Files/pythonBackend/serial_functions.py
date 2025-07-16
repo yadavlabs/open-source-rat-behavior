@@ -98,6 +98,10 @@ def manualControl(ard, component, state, y):
                         com = 'B1' # short
                 else:
                         com = 'B0' # long
+
+        elif component == "tone": # plays high/low frequency tone
+                if state == "true":
+                        com = 'T1'
                         
         elif component == "test-sensors": # allows for testing of sensors and reward delivery
                 if state == "true":

@@ -307,7 +307,8 @@ def WriteToCOMport():
 				stimParams[component] = 1 #randomize stim params
 			else:
 				stimParams[component] = 0 #stop randomizing stim params (set back to initially set params)
-				s.changeAmplitude(gib, stimParams["base_amp"], y) #in this case, only amplitude was randomized
+				if gib.is_open: #if gibson is open, change amplitude to base_amp
+					s.changeAmplitude(gib, stimParams["base_amp"], y) #in this case, only amplitude was randomized
 				stimParams["amplitude"] = stimParams["base_amp"]
 		else: #button presses for manual controls
 
