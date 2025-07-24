@@ -27,24 +27,24 @@ export class DeviceStartupComponent {
 
       DeviceStartupComponent.parentCurTrial = DeviceStartupComponent.parentCurTrialAuditory;
       this.stim_label_1_name = "Enter Tone Duration (ms)";
-      this.stim_label_2_name = "Choose Tone Frequency (High/Low)";
-      this.stim_label_3_name = "Tone";
-      this.stim_val_1_name = "stim_duration";
-      this.stim_val_2_name = "sess_tone";
-      this.stim_val_3_name = "sess_toneL";
-      this.stim_val_4_name = "sess_toneR";
+      this.stim_label_2_name = "Tone Duration";
+      this.stim_val_1_name = "tone_duration";
+      this.stim_val_2_name = "tone_durationL";
+      this.stim_val_3_name = "tone_durationR";
       console.log(this.stim_val_1_name)
       this.exp_type2 = ["Initial Training", "Auditory Experiment"];
       //this.stim_form = this.stim_form_auditory;
       this.stim_form.get('stim_A')?.setValue('500');
-      this.stim_form.get('sess_cv')?.setValue(this.stim_form.get('sess_tone').value);
+      this.stim_form.get('sess_cv')?.setValue(this.stim_form.get('tone_duration').value);
       this.onSessChange = this.onSessChangeAud;
       this.onSessTypeChange = this.onSessTypeChangeAud;
+      this,this.UpdateParamsButtonPressed = this.UpdateParamsButtonPressedAuditory;
     } else {
       //this.stim_form = this.stim_form_ele;
       DeviceStartupComponent.parentCurTrial = DeviceStartupComponent.parentCurTrialEle;
       this.onSessChange = this.onSessChangeStim;
       this.onSessTypeChange = this.onSessTypeChangeStim;
+      this.UpdateParamsButtonPressed = this.UpdateParamsButtonPressedEle;
     }
     this.onSessChange(this.sess_type2)
     this.onSessTypeChange(this.sess_type1)
@@ -76,8 +76,7 @@ export class DeviceStartupComponent {
       sess_time: 'N/A',
       trial_n: 'N/A',
       trial_type: 'N/A',
-      stim_duration: 'N/A',
-      tone_freq: 'N/A',
+      tone_duration: 'N/A',
       forced: 'N/A',
       trial_res: 'N/A',
       per_cor: 'N/A'
@@ -87,7 +86,8 @@ export class DeviceStartupComponent {
   connectFlags = [
     false, // Arduino Connect Flag (true when connected, false when disconnected)
     false, // Gibson Connect Flag ("...")
-    false // Initial Training Flag (true when selected, false when not selected)
+    false, // Initial Training Flag (true when selected, false when not selected)
+    true // override flag for auditory experiment where arduino controls stim and not gibson
   ];
   observeOpenFlag = false; // flag for when the observable is opened
   isStimulatorVisible = false; // flag for visibility of the Gibson stimulator parameters, set to false for auditory experiment
@@ -124,12 +124,10 @@ export class DeviceStartupComponent {
 
   // Stimulator variables
   stim_label_1_name = "Enter Stimulus Amplitude (uA)";
-  stim_label_2_name = "Enter Session CV";
-  stim_label_3_name = "CV";
+  stim_label_2_name = "CV";
   stim_val_1_name = "stim_A";
-  stim_val_2_name = "sess_cv";
-  stim_val_3_name = "sess_cvL";
-  stim_val_4_name = "sess_cvR";
+  stim_val_2_name = "sess_cvL";
+  stim_val_3_name = "sess_cvR";
 
   //stim_form: FormGroup;
   stim_form = new FormGroup({
@@ -141,10 +139,9 @@ export class DeviceStartupComponent {
     stim_width: new FormControl({ value: '200', disabled: false }),
     stim_interval: new FormControl({ value: '50', disabled: false }),
     stim_pulNum: new FormControl({ value: '100', disabled: false }),
-    stim_duration: new FormControl({ value: '500', disabled: false }),
-    sess_tone: new FormControl({ value: 'High', disabled: false }),
-    sess_toneL: new FormControl({ value: 'High', disabled: false }),
-    sess_toneR: new FormControl({ value: 'Low', disabled: false })
+    tone_duration: new FormControl({ value: '500', disabled: false }),
+    tone_durationL: new FormControl({ value: '500', disabled: false }),
+    tone_durationR: new FormControl({ value: '100', disabled: false })
   });
 
   //stim_form_auditory = new FormGroup({
@@ -207,8 +204,9 @@ export class DeviceStartupComponent {
     });
   }
 
+  UpdateParamsButtonPressed: (paramType: string) => void;
 
-  UpdateParamsButtonPressed(paramType: string) {
+  UpdateParamsButtonPressedEle(paramType: string) {
     /*
       This function is called when either "Update <type> Parameters" or "Export/Import Parameters" button is pressed.
         It executes a POST request that sends the respective parameters to the Arduino (session) or Gibson (stimulator),
@@ -251,6 +249,49 @@ export class DeviceStartupComponent {
           this.stim_form.get('sess_toneR').value // Detection Tone - Right Port
         ];
       }
+
+      // The POST request itself, which captures the return response
+      this.flaskService.updateParams(this.STIM_params, paramType).subscribe(x => { this.STIM_res = x });
+    }
+    else {
+
+      // The POST request, which captures the return response
+      this.flaskService.paramsImportExport(paramType).subscribe(x => { this.paramsImpExp_res = x });
+    }
+  }
+  UpdateParamsButtonPressedAuditory(paramType: string) {
+    /*
+      This function is called when either "Update <type> Parameters" or "Export/Import Parameters" button is pressed.
+        It executes a POST request that sends the respective parameters to the Arduino (session) or Gibson (stimulator),
+        which the RESTful API processes.
+    */
+    if (paramType == "Session") {
+
+      // Updates the values of the SESS_params, based on user inputs that have changed since initialization
+      this.SESS_params = [
+        this.sess_type2, // Discrimination/Detection
+        this.sess_type1, // Initial Training/CV Experiment
+        this.sess_len.value, // Session Length (min)
+        this.sess_res_t.value, // Rodent Response Time (s)
+        this.forced_type, // Forced/Unforced
+        this.sess_conerr.value, // Rodent Consecutive Error (n)
+        this.stim_form.get('tone_duration').value, // Detection CV
+        this.stim_form.get('tone_durationL').value, // Discrimination CV - Left Port
+        this.stim_form.get('tone_durationR').value 
+      ];
+
+      // The POST request itself, which captures the return response
+      this.flaskService.updateParams(this.SESS_params, paramType).subscribe(x => { this.SESS_res = x });
+    }
+    if (paramType == "Stimulator") {
+
+      // Updates the values of the STIM_params, based on user inputs that have changed since initialization
+        this.STIM_params = [
+          this.stim_form.get('tone_duration').value, // Detection CV
+          this.stim_form.get('tone_durationL').value, // Discrimination CV - Left Port
+          this.stim_form.get('tone_durationR').value // Discrimination CV - Right Port
+        ];
+
 
       // The POST request itself, which captures the return response
       this.flaskService.updateParams(this.STIM_params, paramType).subscribe(x => { this.STIM_res = x });
@@ -352,11 +393,10 @@ export class DeviceStartupComponent {
       this.connectFlags[2] = true; // changes the Initial Training flag for buttons/sliders
       console.log("Initial Training selected");
       // changes the properties of select form fields
-      this.stim_form.get('stim_duration')?.disable();
+      this.stim_form.get('tone_duration')?.disable();
       //this.stim_form.get('stim_fre')?.disable();
-      this.stim_form.get('sess_tone')?.disable();
-      this.stim_form.get('sess_toneL')?.disable();
-      this.stim_form.get('sess_toneR')?.disable();
+      this.stim_form.get('tone_durationL')?.disable();
+      this.stim_form.get('tone_durationR')?.disable();
       //this.stim_form.get('stim_width')?.disable();
       //this.stim_form.get('stim_interval')?.disable();
       //this.stim_form.get('stim_pulNum')?.disable();
@@ -371,7 +411,7 @@ export class DeviceStartupComponent {
       this.connectFlags[2] = false; // changes the Initial Training flag for buttons/sliders
 
       // changes the properties of select form fields
-      this.stim_form.get('stim_duration')?.enable();
+      this.stim_form.get('tone_duration')?.enable();
       //this.stim_form.get('stim_fre')?.enable();
       //this.stim_form.get('stim_width')?.enable();
       //this.stim_form.get('stim_interval')?.enable();
@@ -382,7 +422,7 @@ export class DeviceStartupComponent {
         this.onSessTypeChange(this.sess_type1);
       }
       else {
-        this.stim_form.get('sess_tone')?.enable();
+        this.stim_form.get('tone_duration')?.enable();
         this.stim_form.get('sess_toneL')?.enable();
         this.stim_form.get('sess_toneR')?.enable();
       }
@@ -419,14 +459,14 @@ export class DeviceStartupComponent {
     */
 
     if (selValue == "Detection" && this.connectFlags[2] == false) {
-      this.stim_form.get('sess_tone')?.enable();
-      this.stim_form.get('sess_toneL')?.disable();
-      this.stim_form.get('sess_toneR')?.disable();
+      this.stim_form.get('tone_duration')?.enable();
+      this.stim_form.get('tone_durationL')?.disable();
+      this.stim_form.get('tone_durationR')?.disable();
     }
     if (selValue == "Discrimination" && this.connectFlags[2] == false) {
-      this.stim_form.get('sess_tone')?.disable();
-      this.stim_form.get('sess_toneL')?.enable();
-      this.stim_form.get('sess_toneR')?.enable();
+      this.stim_form.get('tone_duration')?.disable();
+      this.stim_form.get('tone_durationL')?.enable();
+      this.stim_form.get('tone_durationR')?.enable();
     }
   }
 

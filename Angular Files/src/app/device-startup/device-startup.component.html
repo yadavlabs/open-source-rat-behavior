@@ -342,12 +342,14 @@
       </mat-form-field>
 
       <!-- (6/7) DETECTION SESSION CV FORM FIELD: Allows the user to input the desired CV for a detection experiment. -->
-      <mat-form-field class="cus-form-field">
+      <mat-form-field 
+        *ngIf="isStimulatorVisible"
+        class="cus-form-field">
         <mat-label>
-          {{ stim_label_2_name }}
+          Enter Session CV
         </mat-label>
 
-        <input matInput [formControlName]=stim_val_2_name>
+        <input matInput formControlName="sess_cv">
       </mat-form-field>
 
       <div class="row">
@@ -357,10 +359,10 @@
           <!-- (7a/7) LEFT PORT CV FORM FIELD: Allows the user to input the desired left port CV for a discrimination experiment. -->
           <mat-form-field class="cus-form-field">
             <mat-label>
-              Enter Left Port {{ stim_label_3_name}}
+              Enter Left Port {{ stim_label_2_name}}
             </mat-label>
 
-            <input matInput [formControlName]=stim_val_3_name>
+            <input matInput [formControlName]=stim_val_2_name>
           </mat-form-field>
         </div>
 
@@ -368,10 +370,10 @@
           <!-- (7b/7) RIGHT PORT CV FORM FIELD: Allows the user to input the desired right port CV for a discrimination experiment. -->
           <mat-form-field class="cus-form-field">
             <mat-label>
-              Enter Right Port {{ stim_label_3_name }}
+              Right Port {{ stim_label_2_name }}
             </mat-label>
 
-            <input matInput [formControlName]=stim_val_4_name>
+            <input matInput [formControlName]=stim_val_3_name>
           </mat-form-field>
         </div>
       </div>

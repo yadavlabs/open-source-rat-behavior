@@ -50,6 +50,7 @@ sessionData = { #uses integers and/or floats (not strings) to populate dict
         "response_time":[],
         "correct":[],
         "percent":[],
+		"tone_duration":[],
         "randomized":[],
         "amplitude":[],
         "frequency":[],
@@ -83,13 +84,17 @@ stimParams = { #uses integers and floats (not strings) to populate dict
         "pulse_width":[],#pulse-width in us
         "ipi":[],        #inter-pulse interval in us
         "pulse_num":[],  #number of pulses (only used in periodic case (i.e. CV = 0)
-        "stim_enable":0, #indicates if experiment involves stimulation
+        "stim_enable":1, #indicates if experiment involves stimulation
         "periodic":0,    #indicates if stimulation is periodic (CV = 0) or aperiodic (CV > 0)
         "randomize":0,   #indicates if stimulation parameter should be randomized
         "base_amp":[],   #base/default amplitude set at beginning of session (if randomize=0, this amplitude is used for stimulation trials)
         "task_amps":list(range(25,275,25)), #amplitudes to be randomized and tested (this variable can be changed depending on the experiment)
         "shuffled_amps":[], #randomized amplitudes based on task_amps
-        "amp_indx":0     #index to track which amplitudes have been tested in shuffled_amps
+        "amp_indx":0,     #index to track which amplitudes have been tested in shuffled_amps
+		"tone_duration": [], #duration of the tone in seconds
+		"tone_durationL": [],
+		"tone_durationR": [],
+		"discrimination": 1
         }
 
 ard = serial.Serial() # A serial port object responsible for communication with the Arduino
@@ -129,7 +134,7 @@ def ArduinoSetUpFunctions():
 		ports = s.findPorts() # Gathers the list of connected ports and COM ports
 		ardPorts = [] # Empty list of Arduino ports
 		gibPorts = [] # Empty list of Gibson ports
-
+		print(sessionData)
 		for port in ports:
 			
 			if (request.form["device"] == "Arduino"): # Checks for Arduino device
@@ -253,18 +258,23 @@ def ArduinoSetUpFunctions():
 		params = request.form["params"].split(',')
 
 		if paramType == "Session":
-			if params[0] == "CV Experiment": #sets if experiment includes stimulation
+			if (params[0] == "CV Experiment") or (params[0] == "Auditory Experiment"): #sets if experiment includes stimulation
 				stimParams["stim_enable"] = 1
+				print("Here")
 			else:
 				stimParams["stim_enable"] = 0
-                                
+
+			stimParams["tone_durationL"] = params[7]
+			stimParams["tone_durationR"] = params[8]  
+			print(stimParams)                 
 			s.changeSessionParams(ard,params,y) #updates arduno task parameters
 			if start_flag == 0: #checks if experiment has start (i.e. start button has been pressed)
+
 				while ard.in_waiting > 0: # reads responses to parameter changes until serial port is empty
 					_ = s.arduinoTask(ard, gib, y, sessionData, currentTrialData, stimParams)
 
 		elif paramType == "Stimulator":
-			s.changeStimParams(gib, params, stimParams, y) #changes stimulation parameters
+			s.changeAuditoryParams(ard, params, y) #changes stimulation parameters
 
 		return {"task":request.form["task"], "message":"return", "output":[]}
 
@@ -318,7 +328,8 @@ def WriteToCOMport():
 	
 			#s.manualControl(ard, component, state, y) # write corresponding values to control components
 			if start_flag == 0: #if experiment hasn't started, read from serial port (if experiment has started, arduinoTask is already running)
-				_ = s.arduinoTask(ard, gib, y, sessionData, currentTrialData, stimParams)
+				#_ = s.arduinoTask(ard, gib, y, sessionData, currentTrialData, stimParams)
+				s.readResponse(ard, y)
 
 	elif (request.form["device"] == "Gibson"):
 		#print(request.form["string"])

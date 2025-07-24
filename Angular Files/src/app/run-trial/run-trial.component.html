@@ -22,7 +22,7 @@
       <!-- (1/4) START BUTTON: Allows the user to begin the experiment. -->
       <button mat-raised-button
         (click)="SessionButtonsPressed('start','Arduino')"
-        [disabled]="!(childFlags[0] && (childFlags[1] || childFlags[2]))"
+        [disabled]="!(childFlags[0] && (childFlags[1] || childFlags[2] || childFlags[3]))"
         class="cus-button">
           Start
       </button>
@@ -30,7 +30,7 @@
       <!-- (2/4) STOP BUTTON: Allows the user to stop the experiment. -->
       <button mat-raised-button
         (click)="SessionButtonsPressed('stop','Arduino')"
-        [disabled]="!(childFlags[0] && (childFlags[1] || childFlags[2]))"
+        [disabled]="!(childFlags[0] && (childFlags[1] || childFlags[2] || childFlags[3]))"
         class="cus-button">
           Stop
       </button>
@@ -38,7 +38,7 @@
       <!-- (3/4) PAUSE SLIDER: Allows the user to pause/unpause the experiment. -->
       <mat-slide-toggle
         (change)="onSlideChange('pause','Arduino',$event)"
-        [disabled]="!(childFlags[0] && (childFlags[1] || childFlags[2]))"
+        [disabled]="!(childFlags[0] && (childFlags[1] || childFlags[2] || childFlags[3]))"
         class="cus-slide">
           {{pause_label}}
       </mat-slide-toggle>
@@ -46,7 +46,7 @@
       <!-- (4/4) RANDOMIZE SLIDER: Allows the user to randomize/unrandomize the experiment. -->
       <mat-slide-toggle
         (change)="onSlideChange('randomize','Arduino',$event)"
-        [disabled]="!(childFlags[0] && (childFlags[1] || childFlags[2]))"
+        [disabled]="!(childFlags[0] && (childFlags[1] || childFlags[2] || childFlags[3]))"
         class="cus-slide">
           Randomize
       </mat-slide-toggle>

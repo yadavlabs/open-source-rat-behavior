@@ -11,7 +11,8 @@ const int doorR = 4; //right door (output)
 const int doorL = 5; //left door (output)
 const int solR = 2; //right solenoid (output)
 const int solL = 3; //left solenoid (output)
-const int toneS = 7; //3.5kHz tone (output)
+const int toneHF = 7; //3.5kHz tone (output)
+
 const int lightPin = 6; //houselight (output)
 const int senR = 9; //left sensor (input)
 const int senL = 8; //right sensor (input)
@@ -27,18 +28,22 @@ int senStateR = 0;
 unsigned long startSession; //initialize zero point for session
 unsigned long startWait = 0.0;  //initialize zero point for trial
 unsigned long responseT;
-volatile unsigned long runTime =  3600000; //length of session (msec)
-volatile unsigned long responseTime = 10000; //unforced trial response time (msec)
+unsigned long runTime =  3600000; //length of session (msec)
+unsigned long responseTime = 10000; //unforced trial response time (msec)
 unsigned int unresponsive = 0; //initialize check for non-response trial
-int delayL = 29;//30;//15; //left water reward time (msec)
+int delayL = 28;//30;//15; //left water reward time (msec)
 int delayR = 32;//27;//13; // right water reward time (msec) 
 int readDelay = 10; //delay between reading matlab serial port data (msec)
 
+unsigned long toneDurationL = 500; //duration of auditory stimulus for left port (ms)
+unsigned long toneDurationR = 100; //duration of auditory stimulus for right port (ms)
+
 unsigned int b = 0; //tell if loop was broken
 
-volatile int maxE = 1; //consecutive error
-volatile int fcheck = 1; //setting for forced and repeated trials (1 for forced and repeat, 0 for no forced or repeat)
-volatile int acheck = 1; //setting for alternating port session (1 for port randomizing, 2 for initial training/alternating ports)
+int maxE = 1; //consecutive error
+int fcheck = 1; //setting for forced and repeated trials (1 for forced and repeat, 0 for no forced or repeat)
+int acheck = 1; //setting for alternating port session (1 for port randomizing, 2 for initial training/alternating ports)
+int dcheck = 0; //setting for auditory detection (0) or discrimination (1)
 //event counters
 int U = 0; //number of non-responses
 int R = 0; //number of right port responses
@@ -116,38 +121,39 @@ void loop() {
   delay(500);
   
  
-  if(setTrial == 1){                    //display trial type on lcd and open doors
+  if(setTrial == 1){
     A = 1;
     if(E == maxE && fcheck == 1){
       Serial.println("Forced Left Trial");
-      house_light.ON();//digitalWrite(light,LOW);
+      house_light.ON();
       stim(A);
-      left_door.OPEN();//digitalWrite(doorL,LOW);
+      left_door.OPEN();
     }
     else{
      Serial.println("Left Port Trial");
-     house_light.ON();//digitalWrite(light,LOW);
+     house_light.ON();
      stim(A);
-     left_door.OPEN();//digitalWrite(doorL,LOW);
-     //delay(10);
-     right_door.OPEN();//digitalWrite(doorR,LOW);
+     
+     right_door.OPEN();
+     delay(5);
+     left_door.OPEN();
     }
   }
   else if(setTrial == 2){
     A = 2;
     if(E == maxE && fcheck == 1){
       Serial.println("Forced Right Trial");
-      house_light.ON();//digitalWrite(light,LOW);
+      house_light.ON();
       stim(A);
-      right_door.OPEN();//digitalWrite(doorR,LOW);
+      right_door.OPEN();
     }
     else{
       Serial.println("Right Port Trial");
-      house_light.ON();//digitalWrite(light,LOW);
+      house_light.ON();
       stim(A);
-      left_door.OPEN();//digitalWrite(doorR,LOW);
-      //delay(10);
-      right_door.OPEN();//digitalWrite(doorL,LOW);
+      right_door.OPEN();
+      delay(5);
+      left_door.OPEN();
     }
   }
   
@@ -185,7 +191,7 @@ void loop() {
       Serial.print(setTrial);
       Serial.println(",5");
       left_spout.deliverReward(); //deliverReward(solL);
-      shortTone();
+      //shortTone();
       L++;
       B = 1;
       E = 0;
@@ -219,7 +225,7 @@ void loop() {
       Serial.print(setTrial);
       Serial.println(",5");
       right_spout.deliverReward();//deliverReward(solR);
-      shortTone();
+      //shortTone();
       R++;
       B = 2;
       E = 0;
@@ -247,7 +253,7 @@ void loop() {
       Serial.print(B);
       if(setTrial == 1){
         left_spout.deliverReward();//deliverReward(solL);
-        shortTone();
+        //shortTone();
         L++;
         C++;
         Serial.println(",1");
@@ -255,7 +261,7 @@ void loop() {
         delay(4000);
       }
       else{
-        longTone();
+        //longTone();
         L++;
         I++;
         if(fcheck == 1){
@@ -272,7 +278,7 @@ void loop() {
       Serial.print(B);
 
       if(setTrial == 1){
-        longTone();
+        //longTone();
         R++;
         I++;
         if(fcheck == 1){
@@ -282,7 +288,7 @@ void loop() {
       }
       else{
         right_spout.deliverReward();//deliverReward(solR);
-        shortTone();
+        //shortTone();
         R++;
         C++;
         Serial.println(",1");
@@ -297,7 +303,7 @@ void loop() {
       Serial.print(",");
       Serial.print(B);
       Serial.println(",5");
-      longTone();
+      //longTone();
       unresponsive = 0;
       U++;
       if(fcheck == 1){
@@ -396,7 +402,7 @@ void loop() {
 //intializes pin modes and states
 
 
-void shuffleArray(int * array, int arrSize)
+/*void shuffleArray(int * array, int arrSize)
 {
   randomSeed(analogRead(0));
   int last = 0;
@@ -408,6 +414,50 @@ void shuffleArray(int * array, int arrSize)
     last = index;
   }
   array[last] = temp;
+}*/
+
+void shuffleArray(int * array, int arrSize){ 
+
+  randomSeed(analogRead(0));
+  int last = 0;
+  int temp = array[last];
+  int prevarr[arrSize];
+  for (int i=0; i<arrSize; i++){
+    prevarr[i] = array[i];
+  }
+  Serial.print("Prev arr: ");
+  for (int i=0; i<arrSize; i++){
+    Serial.print(prevarr[i]);
+  }
+  bool flag = true;
+  while(flag==true){
+    for (int i=0; i<arrSize; i++)
+    {
+      int index = random(arrSize);
+      // Serial.print(index);
+      array[last] = array[index];
+      last = index;
+    }
+    Serial.println();
+    array[last] = temp;
+    // flag=false;
+    
+    for (int i=0;i<arrSize; i++)
+    { 
+      if(prevarr[i]!=array[i]){
+      flag= false;
+      Serial.print("Final arr: ");
+      for (int i=0; i<arrSize; i++)
+        {  Serial.print(array[i]);
+        }
+       
+      break;
+      }
+      Serial.println();
+    } 
+
+  }
+ Serial.println();
 }
 
 int flushWater(int s){
@@ -432,13 +482,13 @@ void setPINS(){
   //pinMode(solR,OUTPUT);
   pinMode(senL,INPUT_PULLUP);
   pinMode(senR,INPUT_PULLUP);
-  pinMode(toneS,OUTPUT);
+  pinMode(toneHF,OUTPUT);
   //pinMode(light,OUTPUT);
   //digitalWrite(doorR,LOW);
   //digitalWrite(doorL,LOW);
   digitalWrite(solL,LOW);
   digitalWrite(solR,LOW);
-  digitalWrite(toneS,LOW);
+  digitalWrite(toneHF,LOW);
   //digitalWrite(light,LOW);
   delay(1000);
 }
@@ -447,44 +497,49 @@ void stim(int stimType){
   delay(1000);
   Serial.print("Stim,");
   Serial.println(stimType);
-  delay(3000);
+  if(dcheck == 0 && acheck == 1){ // detection
+    playTone(toneDurationL);
+  }
+  else if(dcheck == 1 && acheck == 1){ //discrimination
+    if(stimType == 1){ //left port stim
+      playTone(toneDurationL);
+    }
+    else if(stimType == 2){ //right port stim
+      playTone(toneDurationR);
+    }
+  }
+  delay(1000);
   
 }
 
-//deliver reward
-/*void deliverReward(int solenoid){
-  if (solenoid == solL){
-    digitalWrite(solenoid,HIGH);
-    delay(sDelayL);
-    digitalWrite(solenoid,LOW);
+void playTone(int toneDuration){
+  digitalWrite(toneHF, HIGH);
+  delay(toneDuration);
+  digitalWrite(toneHF, LOW);
+  if(toneDuration < 2000){ // this makese the time block where stimulus occurs to take 2seconds in total if the stimulus duration is less than 2 seconds
+    delay(2000-toneDuration);
   }
-  else{
-    digitalWrite(solenoid,HIGH);
-    delay(sDelayR);
-    digitalWrite(solenoid,LOW);
-  }
-  shortTone();
-}*/
+}
 
 //short tone
 void shortTone(){
-  digitalWrite(toneS,HIGH);
+  digitalWrite(toneHF,HIGH);
   delay(100);
-  digitalWrite(toneS,LOW);
+  digitalWrite(toneHF,LOW);
 }
 
 //long tone
 void longTone(){
-  digitalWrite(toneS,HIGH);
+  digitalWrite(toneHF,HIGH);
   delay(1000);
-  digitalWrite(toneS,LOW);
+  digitalWrite(toneHF,LOW);
 }
 
 void endTone(){
   for (int p = 1; p < 4; p++){
-    digitalWrite(toneS,HIGH);
+    digitalWrite(toneHF,HIGH);
     delay(100);
-    digitalWrite(toneS,LOW);
+    digitalWrite(toneHF,LOW);
     delay(500);
   }
 }
@@ -495,7 +550,7 @@ void endSession(){
   unsigned long msec = millis() - startSession;
   //unsigned long sec = msec / 1000;
   //unsigned long mins = sec / 60;
-  endTone();
+  //endTone();
   Serial.print("End,");
   Serial.println(msec);
   manualControl();
@@ -562,19 +617,6 @@ void manualControl(){
               right_spout.deliverReward();
               break;
 
- /*           case 'D': //left door manual control -> either "D1" (open left door) or "D0" (close left door)
-              delay(readDelay);
-              int dlCom;
-              dlCom = Serial.parseInt();
-              if(dlCom == 0){
-                left_door.CLOSE();
-                Serial.println("Left Door Closed.");
-              }
-              else if (dlCom == 1){
-                left_door.OPEN();
-                Serial.println("Left Door Opened.");
-              }
-              break;*/
             case 'D':
               if(left_door.getDoorState() == LOW){
                 left_door.OPEN();
@@ -596,33 +638,6 @@ void manualControl(){
                 Serial.println("Right Door Closed.");
               }
               break;
-/*            case 'd': //right door manual control -> either "d1" (open right door) or "d0" (close right door)
-              delay(readDelay);
-              int drCom;
-              drCom = Serial.parseInt();
-              if(drCom == 0){
-                right_door.CLOSE();
-                Serial.println("Right Door Closed.");
-              }
-              else if (drCom == 1){
-                right_door.OPEN();
-                Serial.println("Right Door Opened.");
-              }
-              break;*/
-              
-/*            case 'H': // houselight manual control -> either "H1" (turn on) or "H0" (turn off)
-              delay(readDelay);
-              int hlCom;
-              hlCom = Serial.parseInt();
-              if(hlCom == 0){
-                house_light.OFF();
-                Serial.println("House Light Off");
-              }
-              else if (hlCom == 1){
-                house_light.ON();
-                Serial.println("House Light On");
-              }
-              break;*/
 
             case 'H':
               if(house_light.getLightState() == LOW){
@@ -640,12 +655,12 @@ void manualControl(){
               int bCom;
               bCom = Serial.parseInt();
               if(bCom == 0){
-                longTone();
-                Serial.println("Playing long tone");
+                playTone(toneDurationL);
+                Serial.println("Playing left port tone");
               }
               else if(bCom == 1){
-                shortTone();
-                Serial.println("Playing short tone");
+                playTone(toneDurationR);
+                Serial.println("Playing right port tone");
               }
               break;
                            
@@ -681,7 +696,26 @@ void manualControl(){
               right_door.CLOSE();
               left_door.CLOSE();
               break;
+              
+            case 'C':
+              delay(readDelay);
+              int portVal;
+              int testNum;
+              int testDelay;
+              portVal = Serial.parseInt();
+              delay(readDelay);
+              testNum = Serial.parseInt();
+              delay(readDelay);
+              testDelay = Serial.parseInt();
 
+              if(portVal == 1){
+                left_spout.calibrateReward(portVal, testNum, testDelay);
+              }
+              else{
+                right_spout.calibrateReward(portVal, testNum, testDelay);
+              }
+              break;
+              
             case 'P': //sets various parameters
               delay(readDelay);
               uint8_t p_select;
@@ -730,6 +764,30 @@ void manualControl(){
                     Serial.println("Forced trials enabled.");
                   }
                   break;
+
+                case '6': //set tone (auditory) stimulus duration in msec for left port (ex: "P6500")
+                  toneDurationL = Serial.parseInt();
+                  Serial.print("Tone duration for left port set: ");
+                  Serial.print(toneDurationL);
+                  Serial.println("msec.");
+                  break;
+
+                case '7': //set tone (auditory) stimulus duration in msec for left port (ex: "P7100")
+                  toneDurationR = Serial.parseInt();
+                  Serial.print("Tone duration for right port set: ");
+                  Serial.print(toneDurationR);
+                  Serial.println("msec.");
+                  break;
+                  
+                case '8': //set detection ("P80") or discrimination ("P81")
+                  dcheck = Serial.parseInt();
+                  if(dcheck == 0){
+                    Serial.println("Detection experiment selected");
+                  }
+                  else if(dcheck == 1){
+                    Serial.println("Discrimination experiment selected");
+                  }
+                  break;
                   
               }
               break;
@@ -768,10 +826,10 @@ void manualControl(){
                   break;
 
                 case '5': //get force trials setting ("G5")
-                  if(acheck == 0){
+                  if(fcheck == 0){
                     Serial.println("Forced trials are disabled.");
                   }
-                  else if(acheck == 1){
+                  else if(fcheck == 1){
                     Serial.println("Forced trials are enabled.");
                   }
                   break;

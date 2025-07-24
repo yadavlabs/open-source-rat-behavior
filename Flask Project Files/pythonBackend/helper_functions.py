@@ -23,10 +23,11 @@ def saveSessionDataUI(sessionData, y):
         'Trial',
         'Type',
         'Forced',
-        'Response Time (sec)',
         'Response',
+        'Response  Time (sec)',
         'Correct',
         'Percent (%)',
+        'Tone Duration (sec)',
         'Randomized',
         'Amplitude (uA)',
         'Frequency (Hz)',
@@ -49,6 +50,7 @@ def saveSessionDataUI(sessionData, y):
     else: # on save press
         df = pd.DataFrame(sessionData)
         df.columns = column_names
+
         print(file_info.name)
         if (".xlsx" in str(file_info.name)):
             df.to_excel(file_info.name, index=False)

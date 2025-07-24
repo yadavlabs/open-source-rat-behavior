@@ -17,27 +17,67 @@ def changeSessionParams(ard, params, y):
         #       params - dict of paramaters to updated, ex: params = ['Initial Training', 'Detection', '60', '10', 'Yes', '3']
         #       y      - data stream variable for storing/sending display information to angular
         """
+        print(params)
         com = []
         # sets session
         if params[0] == "Initial Training":
                 ard.write('P42'.encode('utf-8'))
+                
         else:
                 ard.write('P41'.encode('utf-8'))
+                
+                if params[1] == "Detection":
+                        ard.write('P80'.encode('utf-8'))
+                        
+                        ard.write(('P6' + params[7]).encode('utf-8'))
+                        
+                else:
+                        ard.write('P81'.encode('utf-8'))
+                        
+                        ard.write(('P6' + params[7]).encode('utf-8'))
+                        
+                        ard.write(('P7' + params[8]).encode('utf-8'))
+                        
+
 
         # sets session length
         ard.write(('P1' + params[2]).encode('utf-8'))
+        
 
         # sets response time
         ard.write(('P2' + params[3]).encode('utf-8'))
+        
 
         # sets forced trials
         if params[4] == "Yes":
                 ard.write('P51'.encode('utf-8'))
+                
         else:
                 ard.write('P50'.encode('utf-8'))
+                
 
         # set consecutive error
         ard.write(('P3' + params[5]).encode('utf-8'))
+        readResponse(ard, y)
+
+def readResponse(ard, y):
+        while ard.in_waiting == 0: #do nothing until bytes are available to read
+                pass
+        #a = ard.read_until('\r\n')
+        #print(a)
+        while ard.in_waiting > 0: # read all bytes available
+                x = ard.read_until(expected=b'\r\n').decode("utf").rstrip()
+        #x = a.decode("utf").rstrip() # decode bytes to string
+                print(x)
+                data = x.split(',')
+                y.append(data[0])
+
+def changeAuditoryParams(ard, params, y):
+        com = []
+
+        #if
+
+
 
 #def manualControlDic(ard,com):
 com_lookup = {'left-door-true': 'D',
@@ -156,7 +196,10 @@ def arduinoTask(ard, gib, y, sessionData, currentTrialData, stimParams):
         break_flag = 0 # flag to break external while loop if present
         while ard.in_waiting == 0: #do nothing until bytes are available to read
                 pass
+        #a = ard.read_until('\r\n')
+        #print(a)
         x = ard.read_until(expected=b'\r\n').decode("utf").rstrip()
+        #x = a.decode("utf").rstrip() # decode bytes to string
         print(x)
         data = x.split(',')
         if data[0] == "Connected":
@@ -188,23 +231,32 @@ def arduinoTask(ard, gib, y, sessionData, currentTrialData, stimParams):
         elif data[0] == "Type":
                 
                 if data[1] == "2": #right trial, no stimulation for detection experiment
-                        
-                        sessionData["amplitude"].append([])
-                        sessionData["frequency"].append([])
-                        sessionData["CV"].append([])
+                        if stimParams["discrimination"]:
+                                sessionData["tone_duration"].append(stimParams["tone_durationR"])
+                                sessionData["amplitude"].append([])
+                                sessionData["frequency"].append([])
+                                sessionData["CV"].append([])
+                        else:
+                                sessionData["tone_duration"].append([])
+                                sessionData["amplitude"].append([])
+                                sessionData["frequency"].append([])
+                                sessionData["CV"].append([])
                 else: #left trial, stimulation if CV experiment is selected
                         
                         if stimParams["stim_enable"] == 1:
-                                if stimParams["randomize"] == 1:
-                                        randomizeAmplitude(gib, stimParams, y)
-                                        
+                                #if stimParams["randomize"] == 1:
+                                #        randomizeAmplitude(gib, stimParams, y)
+                                print("HERE")
+                                print(stimParams["tone_durationL"])
                                 currentTrialData["stim_A"] = str(stimParams["amplitude"])
                                 currentTrialData["stim_fre"] = str(stimParams["frequency"])
                                 currentTrialData["CV"] = str(stimParams["CV"])
+                                sessionData["tone_duration"].append(stimParams["tone_durationL"])
                                 sessionData["amplitude"].append(stimParams["amplitude"])
                                 sessionData["frequency"].append(stimParams["frequency"])
                                 sessionData["CV"].append(stimParams["CV"])
                         else:
+                                sessionData["tone_duration"].append([])
                                 sessionData["amplitude"].append([])
                                 sessionData["frequency"].append([])
                                 sessionData["CV"].append([])
@@ -226,10 +278,16 @@ def arduinoTask(ard, gib, y, sessionData, currentTrialData, stimParams):
                         if gib.is_open == 1: #stimParams["stimEnable"] == 1
                                 stimulate(gib, stimParams, y)
                         print("Stim")
-                        y.append("Stim")
+                        if stimParams["discrimination"]:
+                                y.append("Left Stim")
+                        else:
+                                y.append("Stim")
                 else:
                         print("No stim")
-                        y.append("No stim")
+                        if stimParams["discrimination"]:
+                                y.append("Right Stim")
+                        else:
+                                y.append("No stim")
                         
         elif data[0] == "Response":
                 res_time = int(data[1]) / 1000
