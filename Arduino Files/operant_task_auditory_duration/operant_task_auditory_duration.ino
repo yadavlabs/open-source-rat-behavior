@@ -572,7 +572,7 @@ void manualControl(){
           int fbyte = Serial.read();
           switch(fbyte){
             
-            case 'b': //begin session (exit setup loop)
+            case 'b': { //begin session (exit setup loop)
               left_door.CLOSE();
               right_door.CLOSE();
               left_spout.OFF();
@@ -582,8 +582,8 @@ void manualControl(){
               serial_flush_buffer();
               ch = 1;
               break;  
-                            
-            case 'L':  //manual left port flush
+            }         
+            case 'L': { //manual left port flush
               Serial.print("Left Port: ");
               if(left_door.getDoorState() == LOW){
                 left_door.OPEN();
@@ -591,8 +591,8 @@ void manualControl(){
               }
               left_spout.flushWater();
               break;
-            
-            case 'R':  //manual right port flush
+            }
+            case 'R': { //manual right port flush
               Serial.print("Right Port: ");
               if(right_door.getDoorState() == LOW){
                 right_door.OPEN();
@@ -600,36 +600,73 @@ void manualControl(){
               }
               right_spout.flushWater();           
               break;
-
-            case 'l': //deliver reward from left spout
+            }
+            case 'l': { //deliver reward from left spout
               if(left_door.getDoorState() == LOW){
                 left_door.OPEN();
                 delay(500);
               }
               left_spout.deliverReward();
               break;
-
-            case 'r': //deliver reward from right spout
+            }
+            case 'r': { //deliver reward from right spout
               if(right_door.getDoorState() == LOW){
                 right_door.OPEN();
                 delay(500);
               }
               right_spout.deliverReward();
               break;
-
-            case 'D':
-              if(left_door.getDoorState() == LOW){
+            }
+            case 'D': {
+              delay(readDelay);
+              uint8_t state = Serial.read();
+              //state = Serial.read();
+              //Serial.println(state);
+              switch (state) {
+                case '1': {
+                  if(left_door.getDoorState() == LOW){
+                    left_door.OPEN();
+                    Serial.println("Left Door Opened.");
+                  }
+                  break;
+                }
+                case '0': {
+                  left_door.CLOSE();
+                  Serial.println("Left Door Closed.");
+                  break;
+                }
+              
+              /*if(left_door.getDoorState() == LOW){
                 left_door.OPEN();
                 Serial.println("Left Door Opened.");
               }
               else{
                 left_door.CLOSE();
                 Serial.println("Left Door Closed.");
+              }*/
+              
               }
               break;
-
-            case 'd':
-              if(right_door.getDoorState() == LOW){
+            }
+            case 'd': {
+              delay(readDelay);
+              uint8_t state = Serial.read();
+              switch (state) {
+                case '1': {
+                  if(right_door.getDoorState() == LOW){
+                    right_door.OPEN();
+                    Serial.println("Right Door Opened.");
+                  }
+                  break;
+                }
+                case '0': {
+                  left_door.CLOSE();
+                  Serial.println("Right Door Closed.");
+                  break;
+                }
+              }
+              break;
+              /*if(right_door.getDoorState() == LOW){
                 right_door.OPEN();
                 Serial.println("Right Door Opened.");
               }
@@ -637,9 +674,9 @@ void manualControl(){
                 right_door.CLOSE();
                 Serial.println("Right Door Closed.");
               }
-              break;
-
-            case 'H':
+              break;*/
+            }
+            case 'H': {
               if(house_light.getLightState() == LOW){
                 house_light.ON();
                 Serial.println("House Light On");
@@ -649,8 +686,8 @@ void manualControl(){
                 Serial.println("House Light Off");
               }
               break;
-
-            case 'B':
+            }
+            case 'B': {
               delay(readDelay);
               int bCom;
               bCom = Serial.parseInt();
@@ -663,8 +700,8 @@ void manualControl(){
                 Serial.println("Playing right port tone");
               }
               break;
-                           
-            case 'J': //test sensors for reward delivery
+            }    
+            case 'J': {//test sensors for reward delivery
               while(1){
                 serial_flush_buffer();
                 right_door.OPEN();
@@ -696,8 +733,8 @@ void manualControl(){
               right_door.CLOSE();
               left_door.CLOSE();
               break;
-              
-            case 'C':
+            }
+            case 'C': {
               delay(readDelay);
               int portVal;
               int testNum;
@@ -715,8 +752,8 @@ void manualControl(){
                 right_spout.calibrateReward(portVal, testNum, testDelay);
               }
               break;
-              
-            case 'P': //sets various parameters
+            }
+            case 'P': {//sets various parameters
               delay(readDelay);
               uint8_t p_select;
               p_select = Serial.read();
@@ -792,8 +829,8 @@ void manualControl(){
               }
               break;
               
-
-            case 'G': //get various parameters and session data
+            }
+            case 'G': {//get various parameters and session data
               delay(readDelay);
               uint8_t g_select;
               g_select = Serial.read();
@@ -836,22 +873,23 @@ void manualControl(){
                 
               }
               break;
-              
-            case 'p':
+            }
+            case 'p': {
               //pt0 = millis();
               Serial.println("Paused");
               break;
-          
-            case 'u':
+            }
+            case 'u': {
               ch = 1;
               Serial.println("Unpaused");
               serial_flush_buffer();
               break;
-
-            case 'Q': 
+            }
+            case 'Q': { 
               endSession();
               break;
             }
-          }
-        }
+      }
+    }
+  }
 }
