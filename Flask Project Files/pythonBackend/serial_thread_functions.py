@@ -15,25 +15,36 @@ from queue import Queue
 COMMAND_MAP = {
     "left-door": lambda state: f"D{int(state == 'true')}",
     "right-door": lambda state: f"d{int(state == 'true')}",
+    "left-flush": lambda state: f"L{int(state == 'true')}",
+    "right-flush": lambda state: f"R{int(state == 'true')}",
+    "house-light": lambda state: f"H{int(state == 'true')}",
+    "buzzer": lambda state: f"B{int(state == 'true')}",
+    "test-sensors": lambda state: f"{'J' if state == 'true' else 'K'}",
+    "pause": lambda state: f"{'p' if state == 'true' else 'u'}",
+    "stop": lambda state: "Q",
+}
+GET_PARAM_MAP = {
+    "session_length": "G1",
+    "response_time": "G2",
+    "consecutive_error": "G3",
+    "session_type": "G4",
+    "forced_trials": "G5",
+    "experiment_type": "G6",
+    "tone_durationL": "G7",
+    "tone_durationR": "G8"
 }
 
-com_lookup = {'left-door-true': 'D',
-              'left-door-false': 'D',
-              'right-door-true': 'd',
-              'right-door-false': 'd',
-              'left-flush-true': 'L',
-              'left-flush-false': 'L',
-              'right-flush-true': 'R',
-              'right-flush-false': 'R',
-              'house-light-true': 'H',
-              'house-light-false':'H',
-              'buzzer-true': 'B1',
-              'buzzer-false': 'B0',
-              'test-sensors-true': 'J',
-              'test-sensors-false': 'K',
-              'pause-true': 'p',
-              'pause-false': 'u',
-              'stop-N/A': 'Q'}
+SET_PARAM_MAP = {
+    "session_length": lambda new_val: f"P1{new_val}",
+    "response_time": lambda new_val: f"P2{new_val}",
+    "consecutive_error": lambda new_val: f"P3{new_val}",
+    "session_type": lambda new_val: f"P4{int(new_val == 'Initial Training')+1}",
+    "forced_trials": lambda new_val: f"P5{int(new_val == 'Yes')}",
+    "experiment_type": lambda new_val: f"P6{int(new_val == 'Discrimination')}",
+    "tone_durationL": lambda new_val: f"P7{new_val}",
+    "tone_durationR": lambda new_val: f"P8{new_val}"
+}
+
 
 
 def findPorts(): #finds and returns devices ocnnected to serial port
@@ -49,15 +60,39 @@ class ArduinoManager:
         self.serial_queue = Queue()
         self.serial_stop_event = threading.Event()
         self.serial_connected_event = threading.Event()
+        self._handle_data = lambda line: None # default
+        self.session_params = {}
+        self.stim_params = {}
+        self.current_trial_data = {}
+        self.session_data = {}
+        #print(f"Active threads before thread finishes: {threading.active_count()}")
+        active_threads = threading.enumerate()
+        for thread in active_threads:
+            if thread.name != "MainThread":
+                print(f"Thread Name: {thread.name}, is alive: {thread.is_alive()}")
+                thread.join()
+    
+    def initialize_experiment(self, session_params, stim_params, current_trial_data, session_data):
+        self.session_params = session_params
+        self.stim_params = stim_params
+        self.current_trial_data = current_trial_data
+        self.session_data = session_data
 
-    def serial_listener(self):
+    #def initialize_session_data(self, session_data):
+    #    self.session_data = session_data
+    
+
+    def _serial_listener(self):
         print("[THREAD] Serial listener started.")
         while not self.serial_stop_event.is_set():
             try:
-                if self.ard.is_open and self.ard.in_wating:
+                if self.ard.is_open and self.ard.in_waiting:
+                    
                     line = self.ard.read_until(expected=b'\r\n').decode("utf").rstrip() #readline().decode('utf-8').strip()
                     if line:
-                        self.serial_queue.put(line)
+                        self._handle_data(line)
+                        #self.serial_queue.put(line)
+
             except serial.SerialException as e:
                     print(f"Serial error: {e}")
                     #self.serial_stop_event.set()
@@ -70,7 +105,8 @@ class ArduinoManager:
         try:
             self.ard = serial.Serial(port, baudrate, timeout=2)  # Initialize the serial port object
             self.serial_stop_event.clear()  # Clear the stop event
-            self.serial_thread = threading.Thread(target=self.serial_listener, daemon=True)  # Create a thread for serial communication
+            self.serial_connected_event.clear()
+            self.serial_thread = threading.Thread(target=self._serial_listener, daemon=True)  # Create a thread for serial communication
             self.serial_thread.start()  # Start the serial thread
             return "Establishing connection"
         except Exception as e:
@@ -79,7 +115,7 @@ class ArduinoManager:
     def disconnect(self):
         if self.ard and self.ard.is_open:
             self.serial_stop_event.set()
-            time.sleep(0.1)  # Give some time for the thread to stop
+            time.sleep(0.2)  # Give some time for the thread to stop
             self.ard.close()
             self.serial_thread.join()  # Wait for the thread to finish
             self.ard = None
@@ -94,6 +130,60 @@ class ArduinoManager:
             except serial.SerialException as e:
                 return f"Error sending command: {e}"
         return "Arduino is not connected."
+    
+    def get_loaded_params(self):
+        # get session parameters, will be updated in _handle_data function
+        # value in python are different from value loaded on arduino 
+        for param in self.session_params: 
+            if param in GET_PARAM_MAP:
+                self.send_command(GET_PARAM_MAP[param])
+
+        # get stimulation parameters, will be updated in _handle_data function
+        # value in python are different from value loaded on arduino 
+        for param in self.stim_params:
+            if param in GET_PARAM_MAP:
+                self.send_command(GET_PARAM_MAP[param])
+            #print("[Arduino] " + param + ": " + GET_PARAM_MAP[param])
+
+    def update_params(self, params):
+        for param, val in params.items():
+            #print(param + ": " + val)
+            #print("Command: " + SET_PARAM_MAP[param](val))
+            #print(val != self.session_params[param])
+            #self.send_command(SET_PARAM_MAP[param](val))
+            print("here")
+            update_val = False
+            if (param in self.session_params) and (val != self.session_params[param]):
+                update_val = True
+                self.session_params[param] = val
+                #print("Session Parameter Updated: " + param)
+                #print("Session" + param)
+            elif (param in self.stim_params) and (val != self.stim_params[param]):
+                update_val = True
+                self.stim_params[param] = val
+                #print("Stim Parameter Updated: " + param)
+            if update_val:
+                self.send_command(SET_PARAM_MAP[param](val))
+                update_val = False
+            
+                #print("Stim" + param)
+            #if val != self.session_params[param]:
+            #    self.send_command(SET_PARAM_MAP[param](val))
+
+
+
+    
+    def get_queue(self):
+        return self.serial_queue
+    
+    def is_connected(self):
+        return self.ard and self.ard.is_open
+    
+    def assign_handler(self, handler_fnc):
+        self._handle_data = handler_fnc.__get__(self, ArduinoManager)
+        
+
+
     
 
 

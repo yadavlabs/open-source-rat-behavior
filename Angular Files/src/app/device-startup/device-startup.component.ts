@@ -22,6 +22,7 @@ import { CurrentTrialDataEle, CurrentTrialDataAuditory } from './CurrentTrialDat
 export class DeviceStartupComponent {
   constructor(private flaskService: FlaskService, public sseService: SSEService) {
     // The following methods are used for initialization of selection values, which are defined below
+    
     if(this.isStimulatorVisible == false) {
       console.log(typeof DeviceStartupComponent.parentCurTrial)
 
@@ -121,6 +122,17 @@ export class DeviceStartupComponent {
   forced_type: string = "Yes";
   sess_conerr = new FormControl('3');
   SESS_params: any;
+
+  paramMap = {
+      "session_length": (v: string) => this.sess_len.setValue(v),
+      "response_time": (v: string) => this.sess_res_t.setValue(v),
+      "consecutive_error": (v: string) => this.sess_conerr.setValue(v),
+      "session_type": (v: string) => this.sess_type2 = v,
+      "experiment_type": (v: string) => this.sess_type1 = v,
+      "forced_trials": (v: string) => this.forced_type = v,
+  };
+
+  
 
   // Stimulator variables
   stim_label_1_name = "Enter Stimulus Amplitude (uA)";
@@ -268,33 +280,30 @@ export class DeviceStartupComponent {
     if (paramType == "Session") {
 
       // Updates the values of the SESS_params, based on user inputs that have changed since initialization
-      this.SESS_params = [
-        this.sess_type2, // Discrimination/Detection
-        this.sess_type1, // Initial Training/CV Experiment
-        this.sess_len.value, // Session Length (min)
-        this.sess_res_t.value, // Rodent Response Time (s)
-        this.forced_type, // Forced/Unforced
-        this.sess_conerr.value, // Rodent Consecutive Error (n)
-        this.stim_form.get('tone_duration').value, // Detection CV
-        this.stim_form.get('tone_durationL').value, // Discrimination CV - Left Port
-        this.stim_form.get('tone_durationR').value 
-      ];
-
+      this.SESS_params = {
+        session_type: this.sess_type2, // Initial Training/CV Experiment
+        experiment_type: this.sess_type1, // Discrimination/Detection
+        session_length: this.sess_len.value, // Session Length (min)
+        response_time: this.sess_res_t.value, // Rodent Response Time (s)
+        forced_trials: this.forced_type, // Forced/Unforced
+        consecutive_error: this.sess_conerr.value, // Rodent Consecutive Error (n)
+      };
       // The POST request itself, which captures the return response
       this.flaskService.updateParams(this.SESS_params, paramType).subscribe(x => { this.SESS_res = x });
-    }
-    if (paramType == "Stimulator") {
-
-      // Updates the values of the STIM_params, based on user inputs that have changed since initialization
-        this.STIM_params = [
-          this.stim_form.get('tone_duration').value, // Detection CV
-          this.stim_form.get('tone_durationL').value, // Discrimination CV - Left Port
-          this.stim_form.get('tone_durationR').value // Discrimination CV - Right Port
-        ];
-
-
-      // The POST request itself, which captures the return response
-      this.flaskService.updateParams(this.STIM_params, paramType).subscribe(x => { this.STIM_res = x });
+      if (this.sess_type1 == "Detection"){
+        this.stim_form.get('tone_durationL')?.setValue(this.stim_form.get('tone_duration').value)
+        //this.stim_form.get('sess_cv')?.setValue(this.stim_form.get('tone_duration').value);
+      }
+      else if (this.sess_type1 == "Discrimination"){
+        this.stim_form.get('tone_duration')?.setValue(this.stim_form.get('tone_durationL').value)
+      }
+      this.STIM_params = {
+        //tone_duration: this.stim_form.get('tone_duration').value, // Detection tone duration (ms)
+        tone_durationL: this.stim_form.get('tone_durationL').value, // Same as above, but used if discrimination is selected
+        tone_durationR: this.stim_form.get('tone_durationR').value
+      }
+      
+      this.flaskService.updateParams(this.STIM_params, "Stimulator").subscribe(x => { this.STIM_res = x });
     }
     else {
 
@@ -469,6 +478,35 @@ export class DeviceStartupComponent {
       this.stim_form.get('tone_durationR')?.enable();
     }
   }
+  handleIncomingMessage(msg: string) {
+    const parts = msg.split(',');
+    console.log(parts);
 
+    if (parts[0] === "GET" && parts.length === 3) {
+      const paramName = parts[1];
+      const paramValue = parts[2];
+
+      this.updateParamFromArduino(paramName, paramValue);
+    }
+  }
+  updateParamFromArduino(name: string, value: string) {
+    //const handlers: { [key: string]: (v: string) => void } = {
+    //  "session_length": (v) => this.sess_len.setValue(v),
+    //  "response_time": (v) => this.sess_res_t.setValue(v),
+    //  "consecutive_error": (v) => this.sess_conerr.setValue(v),
+    //  "session_type": (v) => this.sess_type2 = v,
+    //  "experiment_type": (v) => this.sess_type1 = v,
+    //  "forced_trials": (v) => this.forced_type = v,
+    //};
+    console.log(name)
+    console.log(this.sess_conerr)
+    //console.log(handlers[name](value))
+    if (this.paramMap[name]) {
+      this.paramMap[name](value);
+    } else {
+      console.warn("Unknown parameter from Arduino:", name);
+    }
+    }
 }
+
 

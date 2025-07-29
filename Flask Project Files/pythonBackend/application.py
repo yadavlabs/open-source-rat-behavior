@@ -16,18 +16,20 @@
 """
 
 # Native Python imports
-from flask import Flask, request, Response
+from flask import Flask, request, Response, jsonify
 import flask
 from flask_cors import CORS
 import serial
 import json
 import random
 import time
+from queue import Queue, Empty
 
 # Other Python file imports
 import serial_functions as s #serial port communication functions for both arduino and stimulator
 import helper_functions as h #additional helpers functions
-
+from serial_thread_functions import ArduinoManager, findPorts
+from experiment_handlers import handle_data_auditory, session_params_auditory, stim_params_auditory, current_trial_data_auditory, session_data_auditory
 """
 	Variable declarations:
 	
@@ -38,9 +40,10 @@ import helper_functions as h #additional helpers functions
 		service.
 """
 
-y = [] # The global variable that collects serial port print statements
-start_flag = 0
+#y = [] # The global variable that collects serial port print statements
+#start_flag = 0
 # dictionary to store session data to export/save
+'''
 sessionData = { #uses integers and/or floats (not strings) to populate dict
         "trial_time":[],
         "trial_number":[],
@@ -55,6 +58,7 @@ sessionData = { #uses integers and/or floats (not strings) to populate dict
         "amplitude":[],
         "frequency":[],
         "CV":[]}
+        
 # dictionary for updating Trial table in angular
 currentTrialData = {
         "sess_time":"-",
@@ -66,17 +70,21 @@ currentTrialData = {
         "CV":"-",
         "trial_res":"-",
         "per_cor":"-"
-        }
+}
 # dictionary for storing session task parameters (defaults are defined in ...\Arduino Files\operant_task_control\operant_task_control.no)
 sessionParams = {
-        "experiment":"CV Experiment",
-        "type":"Detection",
-        "session_length":"60",
-        "response_time":"10",
-        "forced_trials":"Yes",
-        "consecutive_error":"1"
-        }
+        'session_type': 'Initial Training',
+		'experiment_type': 'Detection',
+        'session_length': '60',
+        'response_time': '10',
+        'forced_trials': 'Yes',
+        'consecutive_error': '3'
+}
 # dictionary to store default and running stimulation parameters
+stimParams = {
+	'stim_duration': '500',
+	'stim_durationL': '500',
+	'stim_durationR': '100'
 stimParams = { #uses integers and floats (not strings) to populate dict
         "frequency":[],  #frequency in Hz
         "amplitude":[],  #running amplitude in uA
@@ -96,9 +104,12 @@ stimParams = { #uses integers and floats (not strings) to populate dict
 		"tone_durationR": [],
 		"discrimination": 1
         }
-
-ard = serial.Serial() # A serial port object responsible for communication with the Arduino
-gib = serial.Serial() # A serial port object responsible for communication with the Gibson
+'''
+#ard = serial.Serial() # A serial port object responsible for communication with the Arduino
+ard_manager = ArduinoManager()
+ard_manager.assign_handler(handle_data_auditory)
+ard_manager.initialize_experiment(session_params_auditory, stim_params_auditory, current_trial_data_auditory, session_data_auditory)
+#gib = serial.Serial() # A serial port object responsible for communication with the Gibson
 app = Flask(__name__) # This creates the application as a Flask object
 CORS(app) # Implements CORS protocol to the application
 
@@ -123,18 +134,18 @@ View Function 2:
 @app.post("/device_setup")
 def ArduinoSetUpFunctions():
 	# Declaration of global variables for use within the view function
-	global y, ard, gib, sessionData, currentTrialData, stimParams, start_flag
-	print('Task:', request.form["task"])
+	#global y, gib, sessionData, currentTrialData, stimParams, start_flag
+	print("[Flask] Task:", request.form["task"])
 	"""
 		This code is completed if the received HTTP request at this URL
 			includes the specified task, which only originates from the
 			"Find Ports" button on the UI.
 	"""
 	if (request.form["task"] == "findPorts"):
-		ports = s.findPorts() # Gathers the list of connected ports and COM ports
+		ports = findPorts() # Gathers the list of connected ports and COM ports
 		ardPorts = [] # Empty list of Arduino ports
 		gibPorts = [] # Empty list of Gibson ports
-		print(sessionData)
+		#print(sessionData)
 		for port in ports:
 			
 			if (request.form["device"] == "Arduino"): # Checks for Arduino device
@@ -146,7 +157,7 @@ def ArduinoSetUpFunctions():
 				if ("Stellaris" in str(port)): # Checks if the Gibson is the name of the port
 					temp2 = str(port).split(" ")
 					gibPorts.append({"value":str(port),"viewValue":temp2[0]}) # Adds it to the list of Gibson ports
-		print(ardPorts)
+			print("[Flask] Port detected: " + str(port))
 		# The completed lists are returned to the Angular application
 		return {"task":request.form["task"],"message":"success","output":{"Arduino":ardPorts,"Gibson":gibPorts}}
 	
@@ -164,14 +175,29 @@ def ArduinoSetUpFunctions():
 		try:
 			# This code is completed if the "Connect Arduino" button was pressed
 			if (request.form["device"] == "Arduino"): # Checks that it's the Arduino
-				
-				ard.baudrate = int(request.form["baudRate"]) # Extracts the baud rate from sent params
-				ard.port = request.form["port"] # Extracts the COM port from sent params
-				ard.timeout = 2 #read timeout in sec 
-				ard.open() # Opens the serial port object
-				time.sleep(1) # Implements a delay of 1 second for the system to catch up
- 
+				port = request.form["port"]
+				baudrate = int(request.form["baudRate"])
+				status = ard_manager.connect(port, baudrate)
+
+				#ard.baudrate = int(request.form["baudRate"]) # Extracts the baud rate from sent params
+				#ard.port = request.form["port"] # Extracts the COM port from sent params
+				#ard.timeout = 2 #read timeout in sec 
+				#ard.open() # Opens the serial port object
+				#time.sleep(1) # Implements a delay of 1 second for the system to catch up
+				if ard_manager.serial_connected_event.wait(timeout=5.0):
+					return {
+						"task":request.form["task"],
+						"message":"success",
+						"output":request.form["device"]
+					}
+				else:
+					return {
+						"task":request.form["task"],
+						"message":"connection attempt timed out, failed",
+						"output":request.form["device"]
+					}, 408
             # This code is completed if the "Connect Gibson" button was pressed
+			'''
 			elif (request.form["device"] == "Gibson"): # Checks that it's the Gibson
 				
 				gib.baudrate = int(request.form["baudRate"]) # Extracts the baud rate from sent params
@@ -179,13 +205,13 @@ def ArduinoSetUpFunctions():
 				gib.timeout = 2
 				gib.open() # Opens the serial port object
                                 
-			print(request.form["device"] + " is open!") # Partial indicator to the user that the device was opened
-			return {"task":request.form["task"],"message":"success","output":request.form["device"]} # Returns the status message
-						
+				print(request.form["device"] + " is open!") # Partial indicator to the user that the device was opened
+				return {"task":request.form["task"],"message":"success","output":request.form["device"]} # Returns the status message
+			'''			
 		except:
 			# This code is completed if the "try" statement cannot execute
 			print("Failed") # Partial indicator to the user that the device was not opened
-			return {"task":request.form["task"],"message":"failed","output":request.form["device"]} # Returns the status message
+			return {"task":request.form["task"],"message":"failed","output":request.form["device"]}, 500 # Returns the status message
 	
 		
 	"""
@@ -199,15 +225,16 @@ def ArduinoSetUpFunctions():
 	if (request.form["task"] == "closeCOMs"):	
 		try:
 			if (request.form["device"] == "Arduino"): # Checks if the device is the Arduino
-				while ard.in_waiting > 0:
-						ard.readline()
-				ard.close() # Closes the Arduino serial port
-								
+				#while ard.in_waiting > 0:
+				#		ard.readline()
+				#ard.close() # Closes the Arduino serial port
+				ard_manager.disconnect()
+			'''					
 			elif (request.form["device"] == "Gibson"): # Checks if the device is the Gibson
 				while gib.in_waiting > 0:
 						gib.readline()
 				gib.close() # Closes the Gibson serial port
-			
+			'''
 			print(request.form["device"] + " is closed") # Partial indicator that the serial port is closed
 			return {"task":request.form["task"],"message":"success","output":request.form["device"]} # Returns status message
 			
@@ -229,14 +256,15 @@ def ArduinoSetUpFunctions():
 		
 		try: 
 			if request.form["device"] == "Arduino": # Checks the device is the Arduino
-				connected_flag = 0 #flag for establishing arduino connection
-				while connected_flag == 0: #runs until arduino sends "Connected" followed by "Wait"
-					connected_flag = s.arduinoTask(ard, gib, y, sessionData, currentTrialData, stimParams)
+				#connected_flag = 0 #flag for establishing arduino connection
+				while not ard_manager.serial_connected_event.is_set(): #connected_flag == 0: #runs until arduino sends "Connected" followed by "Wait"
+					#connected_flag = s.arduinoTask(ard, gib, y, sessionData, currentTrialData, stimParams)
+					time.sleep(0.1)
 				
-				
-			elif request.form["device"] == "Gibson": # Checks the device is the Gibson
-				print("Entering gibson loop")
-				s.waitForGibson(gib, y) # waits for gibson to respond with "Connected"
+				ard_manager.get_loaded_params()
+			#elif request.form["device"] == "Gibson": # Checks the device is the Gibson
+			#	print("Entering gibson loop")
+			#	s.waitForGibson(gib, y) # waits for gibson to respond with "Connected"
                                 
 		except:
 			print("Couldn't enter the Arduino loop, or leaving the Arduino loop.") # Partial indicator that an error was met
@@ -252,34 +280,63 @@ def ArduinoSetUpFunctions():
 	"""
 	if (request.form["task"] == "updateParams"):
 		#
-		print(ard.is_open)
+		#print(ard.is_open)
 		paramType = request.form["paramType"]
 		#print(request.form["paramType"])
-		params = request.form["params"].split(',')
+		#params = request.form["params"].split(',')
 
 		if paramType == "Session":
-			if (params[0] == "CV Experiment") or (params[0] == "Auditory Experiment"): #sets if experiment includes stimulation
-				stimParams["stim_enable"] = 1
-				print("Here")
-			else:
-				stimParams["stim_enable"] = 0
+			
+			#params = json.loads(request.form["params"])
+			try: 
+				#params = request.form["params"]
+				#print(params["session_type"])
+				#for param in params:
+				#	print(param)
+				#print("HERE1")
+				#params = json.loads(request.form["params"])
+				params = request.form["params"]
+				ard_manager.update_params(json.loads(params))
+				#p = json.loads(params)
+				#for param in p:
+				#	print(param)
+				
+				#print(params)
+			except Exception as e:
+				print("HERE3")
+				print(str(e))
+				print(request.form["params"])
+				return jsonify({"error": f"Invalid JSON in params: {str(e)}"}), 400
 
-			stimParams["tone_durationL"] = params[7]
-			stimParams["tone_durationR"] = params[8]  
-			print(stimParams)                 
-			s.changeSessionParams(ard,params,y) #updates arduno task parameters
-			if start_flag == 0: #checks if experiment has start (i.e. start button has been pressed)
 
-				while ard.in_waiting > 0: # reads responses to parameter changes until serial port is empty
-					_ = s.arduinoTask(ard, gib, y, sessionData, currentTrialData, stimParams)
+			#if (params[0] == "CV Experiment") or (params[0] == "Auditory Experiment"): #sets if experiment includes stimulation
+			#	stimParams["stim_enable"] = 1
+			#	print("Here")
+			#else:
+			#	stimParams["stim_enable"] = 0
+
+			#stimParams["tone_durationL"] = params[7]
+			#stimParams["tone_durationR"] = params[8]  
+			#print(stimParams)                 
+			#s.changeSessionParams(ard,params,y) #updates arduno task parameters
+			#if start_flag == 0: #checks if experiment has start (i.e. start button has been pressed)
+			#
+			#	while ard.in_waiting > 0: # reads responses to parameter changes until serial port is empty
+			#		_ = s.arduinoTask(ard, gib, y, sessionData, currentTrialData, stimParams)
 
 		elif paramType == "Stimulator":
-			s.changeAuditoryParams(ard, params, y) #changes stimulation parameters
+			params = request.form["params"]
+			#p = json.loads(params)
+			ard_manager.update_params(json.loads(params))
+			#params = request.form["params"].split(',')
+			#s.changeAuditoryParams(ard, params, y) #changes stimulation parameters
 
 		return {"task":request.form["task"], "message":"return", "output":[]}
 
 	if (request.form["task"] == "paramsImpExp"):
 		# To implement
+		print("HERE")
+		print(request.form)
 		return {"task":request.form["task"], "message":"return", "output":[]}
 		
 
@@ -360,9 +417,9 @@ def WriteToCOMport():
 def dataStream():
 	
 	def get_data():
-		global y, currentTrialData
-		trialData_lastPass = currentTrialData.copy() #have to make a copy
-		
+		#global y, currentTrialData
+		#trialData_lastPass = currentTrialData.copy() #have to make a copy
+		last_trial = {}
 		"""
 			Both conditions in the while loop create a dictionary that
 				will be yielded to the data stream, processes the variables
@@ -370,8 +427,19 @@ def dataStream():
 				(trialData_lastPass), and the yields the data in a
 				specially constructed f-string.
 		"""
-		while True:			
-			if y != []:
+		while True:
+			try:
+				msg = ard_manager.serial_queue.get_nowait()
+				payload = json.dumps({"item1": msg})
+				yield f"data: {payload}\nevent: message\n\n"
+			except Empty:
+				pass
+
+			if ard_manager.current_trial_data != last_trial:
+				payload = json.dumps({"item2": ard_manager.current_trial_data})
+				last_trial = ard_manager.current_trial_data
+				yield f"data: {payload}\nevent: message\n\n"	
+			'''if y != []:
 				dict_toSend = json.dumps({"item1":y, "item2":currentTrialData})
 				del y[:]
 				yield f"data: {dict_toSend}\nevent: message\n\n"
@@ -379,7 +447,9 @@ def dataStream():
 			if currentTrialData != trialData_lastPass:
 				dict_toSend = json.dumps({"item2":currentTrialData})
 				trialData_lastPass = currentTrialData.copy()
-				yield f"data: {dict_toSend}\nevent: message\n\n"		
+				yield f"data: {dict_toSend}\nevent: message\n\n"
+				'''		
+			time.sleep(0.1)
 
 	"""
 		The dataStream function returns a response, which is dependent

@@ -77,11 +77,11 @@ void setup() {
   
   Serial.begin(baudrate);
   randomSeed(analogRead(0));
-  delay(500);
+  //delay(500);
   Serial.flush();
   Serial.print("Connected,");
   //Serial.println("Waiting for input...");
-  delay(200);
+  //delay(200);
   manualControl();
   startSession = millis();
   Serial.print("Start,");
@@ -584,21 +584,55 @@ void manualControl(){
               break;  
             }         
             case 'L': { //manual left port flush
-              Serial.print("Left Port: ");
+              
               if(left_door.getDoorState() == LOW){
-                left_door.OPEN();
-                delay(500);
+                Serial.println("Left door not opened.");
+                //left_door.OPEN();
+                //delay(500);
               }
-              left_spout.flushWater();
+              else {
+                Serial.print("Left Port: ");
+                delay(readDelay);
+                uint8_t state = Serial.read();
+                switch (state) {
+                  case '1':
+                    left_spout.flushWater();
+                    break;
+
+                  case '0':
+                    left_spout.OFF();
+                    Serial.println("Water flushed.");
+                    break;
+                }
+                
+                
+              }
               break;
             }
             case 'R': { //manual right port flush
-              Serial.print("Right Port: ");
+              //Serial.print("Right Port: ");
               if(right_door.getDoorState() == LOW){
-                right_door.OPEN();
-                delay(500); 
+                Serial.println("Right door not opened.");
+                //right_door.OPEN();
+                //delay(500); 
               }
-              right_spout.flushWater();           
+              else {
+                Serial.println("Right port: ");
+                delay(readDelay);
+                uint8_t state = Serial.read();
+                switch (state) {
+                  case '1': 
+                    right_spout.flushWater();
+                    break;
+
+                  case '0':
+                    right_spout.OFF();
+                    Serial.println("Water flushed.");
+                    break;
+                }
+                
+              }
+                         
               break;
             }
             case 'l': { //deliver reward from left spout
@@ -676,28 +710,37 @@ void manualControl(){
               }
               break;*/
             }
-            case 'H': {
-              if(house_light.getLightState() == LOW){
-                house_light.ON();
-                Serial.println("House Light On");
-              }
-              else{
-                house_light.OFF();
-                Serial.println("House Light Off");
+            case 'H': { //House light
+              delay(readDelay);
+              uint8_t state = Serial.read();
+              switch (state) {
+                case '1':
+                  house_light.ON();
+                  Serial.println("House Light On.");
+                  break;
+                
+                case '0':
+                  house_light.OFF();
+                  Serial.println("House Light Off.");
+                  break;
               }
               break;
             }
             case 'B': {
               delay(readDelay);
-              int bCom;
-              bCom = Serial.parseInt();
-              if(bCom == 0){
-                playTone(toneDurationL);
-                Serial.println("Playing left port tone");
-              }
-              else if(bCom == 1){
-                playTone(toneDurationR);
-                Serial.println("Playing right port tone");
+              uint8_t bCom = Serial.read();
+              switch (bCom){
+                case '0':
+                  Serial.println("Playing left port tone...");
+                  playTone(toneDurationL);
+                  Serial.println("Tone complete.");
+                  break;
+
+                case '1':
+                  Serial.println("Playing right port tone...");
+                  playTone(toneDurationR);
+                  Serial.println("Tone complete.");
+                  break;
               }
               break;
             }    
@@ -727,6 +770,17 @@ void manualControl(){
                 if(fbyte == 'K'){
                   Serial.println("End port test.");
                   break;
+                }
+                else if (fbyte == 'L') {
+                  left_spout.deliverReward();
+                  serial_flush_buffer();
+                }
+                else if (fbyte == 'R') {
+                  right_spout.deliverReward();
+                  serial_flush_buffer();
+                }
+                else{
+                  serial_flush_buffer();
                 }
                 delay(1000);
               }
@@ -760,71 +814,94 @@ void manualControl(){
               //Serial.print("Here ");
               //Serial.println(p_select);
               delay(readDelay);
+              Serial.print("SET,");
               switch(p_select){
 
                 case '1': //change session length (ex: "P155" sets session length to 55min)
                   runTime = Serial.parseInt() * 60000;
-                  Serial.print("Session time set: ");
+                  Serial.print("session_length,");
                   Serial.print(runTime/60000);
-                  Serial.println("min.");
+                  Serial.println("min");
                   break;
 
                 case '2': //change response time (ex: "P215" sets response time to 15sec)
                   responseTime = Serial.parseInt() * 1000;
-                  Serial.print("Response time set: ");
+                  Serial.print("response_time,");
                   Serial.print(responseTime/1000);
-                  Serial.println("sec.");
+                  Serial.println("sec");
                   break;
 
                 case '3': //change consecutive error (ex: "P32" changes consecutive error to 2)
                   maxE = Serial.parseInt();
-                  Serial.print("Consecutive error set: ");
+                  Serial.print("consecutive_error,");
                   Serial.println(maxE);
                   break;
 
                 case '4': //enable or disable alternating ports (disable: "P41", enable: "P42")
+
                   acheck = Serial.parseInt();
-                  if(acheck == 1){
-                    Serial.println("Alternating ports disabled.");
-                  }
-                  else if(acheck == 2){
-                    Serial.println("Alternating ports enabled.");
-                  }
+                  acheck = constrain(acheck, 1, 2);
+                  Serial.print("session_type,");
+                  //Serial.print(acheck);
+                  //Serial.print(",");
+                  //if (acheck == 1) {
+                  //  Serial.println("Auditory Experiment");
+                  //}
+                  //else if (acheck == 2) {
+                  
+                  //}
+                  Serial.println((acheck == 1) ? "Auditory Experiment" : "Initial Training");
+                  //if(acheck == 1){
+                  //  Serial.println("Alternating ports disabled.");
+                  //}
+                  //else if(acheck == 2){
+                  //  Serial.println("Alternating ports enabled.");
+                  //}
                   break;
 
                 case '5': //enable or disable forced trials (disable: "P50", enable: "P51")
                   fcheck = Serial.parseInt();
-                  if(fcheck == 0){
-                    Serial.println("Forced trials disabled.");
-                  }
-                  else if(fcheck == 1){
-                    Serial.println("Forced trials enabled.");
-                  }
+                  fcheck = constrain(fcheck, 0, 1);
+                  Serial.print("forced_trials,");
+                  //Serial.print(fcheck);
+                  //Serial.print(",");
+                  Serial.println(fcheck ? "Enabled" : "Disabled");
+                  //if(fcheck == 0){
+                  //  Serial.println("Forced trials disabled.");
+                  //}
+                  //else if(fcheck == 1){
+                  //  Serial.println("Forced trials enabled.");
+                  //}
                   break;
 
-                case '6': //set tone (auditory) stimulus duration in msec for left port (ex: "P6500")
+                case '6': //set detection ("P60") or discrimination ("P61")
+                  dcheck = Serial.parseInt();
+                  dcheck = constrain(dcheck, 0, 1);
+                  Serial.print("experiment_type,");
+                  Serial.println(dcheck ? "Discrimination" : "Detection");
+                  //if(dcheck == 0){
+                  //  Serial.println("Detection experiment selected");
+                  //}
+                  //else if(dcheck == 1){
+                  //  Serial.println("Discrimination experiment selected");
+                  //}
+                  break;
+
+                case '7': //set tone (auditory) stimulus duration in msec for left port (ex: "P7500")
                   toneDurationL = Serial.parseInt();
-                  Serial.print("Tone duration for left port set: ");
+                  Serial.print("tone_duration,");
                   Serial.print(toneDurationL);
                   Serial.println("msec.");
                   break;
 
-                case '7': //set tone (auditory) stimulus duration in msec for left port (ex: "P7100")
+                case '8': //set tone (auditory) stimulus duration in msec for left port (ex: "P8100")
                   toneDurationR = Serial.parseInt();
-                  Serial.print("Tone duration for right port set: ");
+                  Serial.print("tone_durationR,");
                   Serial.print(toneDurationR);
                   Serial.println("msec.");
                   break;
                   
-                case '8': //set detection ("P80") or discrimination ("P81")
-                  dcheck = Serial.parseInt();
-                  if(dcheck == 0){
-                    Serial.println("Detection experiment selected");
-                  }
-                  else if(dcheck == 1){
-                    Serial.println("Discrimination experiment selected");
-                  }
-                  break;
+                
                   
               }
               break;
@@ -837,40 +914,62 @@ void manualControl(){
               switch(g_select){
 
                 case '1': //get session length ("G1")
-                  Serial.print("Session length is set to: ");
-                  Serial.print(runTime / 60000);
-                  Serial.println("min.");
+                  Serial.print("GET,session_length,");
+                  Serial.println(runTime / 60000);
+                  
+                  //Serial.println("min.");
                   break;
 
                 case '2': //get response time ("G2")
-                  Serial.print("Response time is set to: ");
-                  Serial.print(responseTime / 1000);
-                  Serial.println("sec.");
+                  Serial.print("GET,response_time,");
+                  Serial.println(responseTime / 1000);
+                  //Serial.println("sec.");
                   break;
 
                 case '3': //get max consecutive error ("G3")
-                  Serial.print("Consecutive error is set to: ");
+                  Serial.print("GET,consecutive_error,");
                   Serial.println(maxE);
                   break;
 
                 case '4': //get alternating ports setting ("G4")
                   if(acheck == 1){
-                    Serial.println("Alternating ports is enabled.");
+                    //Serial.println("Alternating ports is enabled.");
+                    Serial.print("GET,session_type,");
+                    Serial.println("Initial Training");
                   }
                   else if(acheck == 2){
-                    Serial.println("Alternating ports is disabled.");
+                    //Serial.println("Alternating ports is disabled.");
+                    Serial.print("GET,session_type,");
+                    Serial.println("Auditory Experiment");
                   }
                   break;
 
                 case '5': //get force trials setting ("G5")
+                  Serial.print("GET,forced_trials,");
                   if(fcheck == 0){
-                    Serial.println("Forced trials are disabled.");
+                    Serial.println("No");
+                    //Serial.println("Forced trials are disabled.");
                   }
                   else if(fcheck == 1){
-                    Serial.println("Forced trials are enabled.");
+                    Serial.println("Yes");
+                    //Serial.println("Forced trials are enabled.");
                   }
                   break;
-                
+
+                case '6': //get experiment type: auditory detection (0) or discrimination (1)
+                  Serial.print("GET,experiment_type,");
+                  Serial.println(dcheck ? "Discrimination" : "Detection");
+                  break;
+
+                case '7': //left port tone duration
+                  Serial.print("GET,tone_durationL,");
+                  Serial.println(toneDurationL);
+                  break;
+
+                case '8': //right port tone duration
+                  Serial.print("GET,tone_durationR,");
+                  Serial.println(toneDurationR);
+                  break;
               }
               break;
             }

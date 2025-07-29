@@ -35,9 +35,18 @@ export class SSEService {
         subject.next(JSON.parse(e.data)); // appends the data to the BehaviorSubject observable object
         
         const elemToAdd = JSON.parse(e.data)["item1"]; // parses the print statements from devices
-        DeviceStartupComponent.prototype.scrollToBot(elemToAdd) // passes the newly printed statement to append in the view-port
-
+        if (typeof elemToAdd == 'string'){
+          if (elemToAdd.includes("GET")){
+            console.log("here")
+            
+            DeviceStartupComponent.prototype.handleIncomingMessage(elemToAdd)
+          }
+        }
+        else {
+          DeviceStartupComponent.prototype.scrollToBot(elemToAdd) // passes the newly printed statement to append in the view-port
+        }
         const incSessData = JSON.parse(e.data)["item2"]; // parses the current trial data
+        console.log(incSessData)
         DeviceStartupComponent.parentCurTrial = incSessData; // redefines the current trial data with the newly parsed data
         }
 
