@@ -405,4 +405,9 @@
   Flags (connectFlags) are being sent to the child to use in button enabling/disabling, and the
     current trial data (staticSessData) is being sent to the child to display in a table.
 -->
-<app-run-trial [childFlags]="connectFlags" [childCurTrial]="staticSessData"></app-run-trial>
+<app-run-trial 
+  *ngIf="tableFields && connectFlags"
+  [childFlags]="connectFlags"
+  [childTrialTable]="tableFields"
+  [childCurTrial]="staticSessData">
+</app-run-trial>

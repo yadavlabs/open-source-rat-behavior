@@ -335,7 +335,7 @@ def ArduinoSetUpFunctions():
 
 	if (request.form["task"] == "paramsImpExp"):
 		# To implement
-		print("HERE")
+		#print("HERE")
 		print(request.form)
 		return {"task":request.form["task"], "message":"return", "output":[]}
 		
@@ -346,14 +346,14 @@ View Function 3:
 """
 @app.route("/to_dev",methods=["POST"])
 def WriteToCOMport():
-	global ard, gib, y, currentTrialData, start_flag
+	#global ard, gib, y, currentTrialData, start_flag
 
 	if (request.form["device"] == "Arduino"): #check if POST is associated with Arduino
 
 		component = request.form["string"] #checks the button/switch that was pressed
 		state = request.form["butState"] #checks state, "true" or "false" for switches or "N/A" for buttons
-
-		
+		ard_manager.send_command(component, state)
+		'''
 		if component == "start": #start button was pressed
 			
 			if stimParams["stim_enable"] == 1: #if experiment involves stimulation, perform initial randomization of stim params
@@ -387,7 +387,7 @@ def WriteToCOMport():
 			if start_flag == 0: #if experiment hasn't started, read from serial port (if experiment has started, arduinoTask is already running)
 				#_ = s.arduinoTask(ard, gib, y, sessionData, currentTrialData, stimParams)
 				s.readResponse(ard, y)
-
+	'''
 	elif (request.form["device"] == "Gibson"):
 		#print(request.form["string"])
 		
@@ -419,7 +419,7 @@ def dataStream():
 	def get_data():
 		#global y, currentTrialData
 		#trialData_lastPass = currentTrialData.copy() #have to make a copy
-		last_trial = {}
+		last_trial = {} #ard_manager.current_trial_data.copy()
 		"""
 			Both conditions in the while loop create a dictionary that
 				will be yielded to the data stream, processes the variables
@@ -437,8 +437,9 @@ def dataStream():
 
 			if ard_manager.current_trial_data != last_trial:
 				payload = json.dumps({"item2": ard_manager.current_trial_data})
-				last_trial = ard_manager.current_trial_data
-				yield f"data: {payload}\nevent: message\n\n"	
+				last_trial = ard_manager.current_trial_data.copy()
+				yield f"data: {payload}\nevent: message\n\n"
+
 			'''if y != []:
 				dict_toSend = json.dumps({"item1":y, "item2":currentTrialData})
 				del y[:]

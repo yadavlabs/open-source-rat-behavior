@@ -1,5 +1,5 @@
 // Import modules
-import { Component, Input } from '@angular/core';
+import { Component, Input, SimpleChanges } from '@angular/core';
 import { MatSlideToggleChange } from '@angular/material/slide-toggle';
 
 // Import services
@@ -14,12 +14,18 @@ import { FlaskService } from '../total.service';
 
 
 export class RunTrialComponent {
-  constructor(private flaskService: FlaskService) { }
+
+  toggleStates: { [key: string]: boolean } = {
+    'left-door': false
+  }
+
+  constructor(private flaskService: FlaskService) {}
   
   post_res: any; // records responses from the POST requests
   pause_label: string = "Pause"; // text to display for the print toggle slider
   @Input() childFlags: any; // the inherited flags to coordinate button enabling/disabling
   @Input() childCurTrial: any; // the inherited current trial data to display in the table
+  @Input() childTrialTable: any;
   man_flag: boolean = false; // flag to determine whether the manual control buttons/toggle sliders are enabled/disabled
 
   // Tooltips for select buttons and form fields
@@ -54,7 +60,7 @@ export class RunTrialComponent {
         ($event.checked) is sent as an argument, alongside the destination device (device), and
         a string to indicate which slider was changed (butString).
     */
-
+    console.log(this.childTrialTable)
     // The POST request, where the return from the RESTful API is captured
     this.flaskService.writeToCOMport(butString, device, $event.checked).subscribe(data => { this.post_res = data });
 
@@ -68,4 +74,6 @@ export class RunTrialComponent {
       this.man_flag = true;
     }
   }
+
+
 }

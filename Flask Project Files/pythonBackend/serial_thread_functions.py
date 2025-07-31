@@ -22,6 +22,7 @@ COMMAND_MAP = {
     "test-sensors": lambda state: f"{'J' if state == 'true' else 'K'}",
     "pause": lambda state: f"{'p' if state == 'true' else 'u'}",
     "stop": lambda state: "Q",
+    "start": lambda state: "b"
 }
 GET_PARAM_MAP = {
     "session_length": "G1",
@@ -89,6 +90,7 @@ class ArduinoManager:
                 if self.ard.is_open and self.ard.in_waiting:
                     
                     line = self.ard.read_until(expected=b'\r\n').decode("utf").rstrip() #readline().decode('utf-8').strip()
+                    #print(line)
                     if line:
                         self._handle_data(line)
                         #self.serial_queue.put(line)
@@ -122,10 +124,16 @@ class ArduinoManager:
             return "Disconnected from Arduino."
         return "Arduino is not connected."
     
-    def send_command(self, command):
+    def send_command(self, component, state):
+        #command = COMMAND_MAP[component](state)
+        print(COMMAND_MAP[component](state))
+        self.write_utf(COMMAND_MAP[component](state))
+
+
+    def write_utf(self, data):
         if self.ard and self.ard.is_open:
             try:
-                self.ard.write((command + '\r\n').encode('utf-8'))  # Send command to Arduino
+                self.ard.write((data + '\r\n').encode('utf-8'))  # Send command to Arduino
                 return "Command sent."
             except serial.SerialException as e:
                 return f"Error sending command: {e}"
@@ -136,13 +144,13 @@ class ArduinoManager:
         # value in python are different from value loaded on arduino 
         for param in self.session_params: 
             if param in GET_PARAM_MAP:
-                self.send_command(GET_PARAM_MAP[param])
+                self.write_utf(GET_PARAM_MAP[param])
 
         # get stimulation parameters, will be updated in _handle_data function
         # value in python are different from value loaded on arduino 
         for param in self.stim_params:
             if param in GET_PARAM_MAP:
-                self.send_command(GET_PARAM_MAP[param])
+                self.write_utf(GET_PARAM_MAP[param])
             #print("[Arduino] " + param + ": " + GET_PARAM_MAP[param])
 
     def update_params(self, params):
@@ -163,7 +171,7 @@ class ArduinoManager:
                 self.stim_params[param] = val
                 #print("Stim Parameter Updated: " + param)
             if update_val:
-                self.send_command(SET_PARAM_MAP[param](val))
+                self.write_utf(SET_PARAM_MAP[param](val))
                 update_val = False
             
                 #print("Stim" + param)

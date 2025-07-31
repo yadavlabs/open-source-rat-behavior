@@ -72,27 +72,15 @@
       <table class="table cus-table">
         <!-- The header row -->
         <thead> 
-          <th scope="col">Time (min)</th>
-          <th scope="col">Number</th>
-          <th scope="col">Type</th>
-          <th scope="col">Amplitude (uA)</th>
-          <th scope="col">Frequency (Hz)</th>
-          <th scope="col">CV</th>
-          <th scope="col">Forced</th>
-          <th scope="col">Response</th>
-          <th scope="col">Correct (%)</th>
+          <tr>
+            <th *ngFor="let field of childTrialTable" scope="col">{{ field.label }}</th>  
+          </tr>
         </thead>
         <!-- The data row -->
         <tbody>
-          <td>{{childCurTrial.sess_time}}</td>
-          <td>{{childCurTrial.trial_n}}</td>
-          <td>{{childCurTrial.trial_type}}</td>
-          <td>{{childCurTrial.stim_A}}</td>
-          <td>{{childCurTrial.stim_fre}}</td>
-          <td>{{childCurTrial.CV}}</td>
-          <td>{{childCurTrial.forced}}</td>
-          <td>{{childCurTrial.trial_res}}</td>
-          <td>{{childCurTrial.per_cor}}</td>
+          <tr>
+            <td *ngFor="let field of childTrialTable">{{ childCurTrial[field.key] }}</td>
+          </tr>
         </tbody>
       </table>
 

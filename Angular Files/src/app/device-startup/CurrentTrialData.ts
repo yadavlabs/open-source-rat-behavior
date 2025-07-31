@@ -24,3 +24,4 @@ export interface CurrentTrialDataAuditory {
     trial_res: string; // Current trial response (1 = left port, 2 = right port, 5 = no response)
     per_cor: string; // Percent correct over session
 }
+

@@ -370,13 +370,14 @@ void loop() {
   T = L + R;
   N = L + R + U;
   if(T-F == 0){
-    P = 0;
+    P = 0.0;
   }
   else{
     P =(float)C/((float)T-(float)F);
-    Serial.print("Percent,");
-    Serial.println(P); 
+     
   }
+  Serial.print("Percent,");
+  Serial.println(P);
 /*  if(P > 0.65 && P <= 0.80){
     maxE = 2;
   }
@@ -745,47 +746,65 @@ void manualControl(){
               break;
             }    
             case 'J': {//test sensors for reward delivery
-              while(1){
-                serial_flush_buffer();
-                right_door.OPEN();
-                left_door.OPEN();
-                Serial.println("Testing Ports...");
-                delay(250);
-                while(1){
-                  if(digitalRead(senL) == LOW){
-                    Serial.println("Left port poke.");
-                    left_spout.deliverReward();
-                    break;
-                  }
-                  else if(digitalRead(senR) == LOW){
-                    Serial.println("Right port poke.");
-                    right_spout.deliverReward();
-                    break;
-                  }
-                  if(Serial.available()){
-                    fbyte = Serial.read();
-                    break;
-                  }
-                }
-                if(fbyte == 'K'){
-                  Serial.println("End port test.");
-                  break;
-                }
-                else if (fbyte == 'L') {
+              bool test_sensor_flag = true;
+              serial_flush_buffer();
+              right_door.OPEN();
+              left_door.OPEN();
+              Serial.println("Testing Ports...");
+              delay(250);
+              while(test_sensor_flag){
+                if (digitalRead(senL) == LOW){
+                  Serial.println("Left port poke.");
                   left_spout.deliverReward();
-                  serial_flush_buffer();
+                  delay(1000);
                 }
-                else if (fbyte == 'R') {
+                else if (digitalRead(senR) == LOW){
+                  Serial.println("Right port poke.");
                   right_spout.deliverReward();
-                  serial_flush_buffer();
+                  delay(1000);
                 }
-                else{
-                  serial_flush_buffer();
+                if (Serial.available() > 0) {
+                  byte jbyte = Serial.read();
+                  switch (jbyte) {
+                    case 'K':
+                      test_sensor_flag = false;
+                      break;
+
+                    case 'D':
+                      if (left_door.getDoorState() == LOW) {
+                        left_door.OPEN();
+                      }
+                      else {
+                        left_door.CLOSE();
+                      }
+                      break;
+                    
+                    case 'd':
+                      if (right_door.getDoorState() == LOW) {
+                        right_door.OPEN();
+                      }
+                      else {
+                        right_door.CLOSE();
+                      }
+                    case 'L':
+                      left_spout.deliverReward();
+                      Serial.println("Left port reward deliverd.");
+                      serial_flush_buffer();
+                      break;
+
+                    case 'R':
+                      right_spout.deliverReward();
+                      Serial.println("Right port reward deliverd.");
+                      serial_flush_buffer();
+                      break;
+                    
+                    default:
+                      serial_flush_buffer();
+                      break;
+                  }
                 }
-                delay(1000);
               }
-              right_door.CLOSE();
-              left_door.CLOSE();
+              Serial.println("End port test.");
               break;
             }
             case 'C': {

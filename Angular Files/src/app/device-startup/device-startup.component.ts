@@ -5,12 +5,12 @@ import { FormControl, FormGroup } from '@angular/forms';
 // Importing services
 import { FlaskService } from '../total.service';
 import { SSEService } from './sse.service';
+import { Subscription } from 'rxjs';
 
 // Importing interfaces
 import { postDic } from '../postDic';
 import { DropDownInfo } from './DropDownInfo';
 import { CurrentTrialDataEle, CurrentTrialDataAuditory } from './CurrentTrialData';
-
 
 @Component({
   selector: 'app-device-startup',
@@ -20,13 +20,35 @@ import { CurrentTrialDataEle, CurrentTrialDataAuditory } from './CurrentTrialDat
 
 
 export class DeviceStartupComponent {
+  private sseSub!: Subscription;
+  ngOnInit(){
+    this.sseSub = this.sseService.paramUpdates$.subscribe(({ name, value }) => {
+      this.updateParamFromArduino(name, value); // subsribe incoming data from sse.service.ts
+    });
+  }
+  //paramMap: { [key: string]: (v: string) => void } = {};
   constructor(private flaskService: FlaskService, public sseService: SSEService) {
     // The following methods are used for initialization of selection values, which are defined below
+    //this.paramMap = {
+    //  "session_length": (v: string) => this.sess_len.setValue(v),
+    //  "response_time": (v: string) => this.sess_res_t.setValue(v),
+    //  "consecutive_error": (v: string) => this.sess_conerr.setValue(v),
+    //  "session_type": (v: string) => this.sess_type2 = v,
+    //  "experiment_type": (v: string) => this.sess_type1 = v,
+    //  "forced_trials": (v: string) => this.forced_type = v,
+    //};
+    //console.log(typeof this.tableFields)
+    //console.log(CurrentTrialTable)
+
     
     if(this.isStimulatorVisible == false) {
-      console.log(typeof DeviceStartupComponent.parentCurTrial)
+      
 
       DeviceStartupComponent.parentCurTrial = DeviceStartupComponent.parentCurTrialAuditory;
+      console.log(this.connectFlags)
+      console.log(this.tableFields)
+      //console.log(DeviceStartupComponent.parentCurTrial[this.tableFields[1].key])
+      //console.log(this.tableFields[0].key)
       this.stim_label_1_name = "Enter Tone Duration (ms)";
       this.stim_label_2_name = "Tone Duration";
       this.stim_val_1_name = "tone_duration";
@@ -39,7 +61,7 @@ export class DeviceStartupComponent {
       this.stim_form.get('sess_cv')?.setValue(this.stim_form.get('tone_duration').value);
       this.onSessChange = this.onSessChangeAud;
       this.onSessTypeChange = this.onSessTypeChangeAud;
-      this,this.UpdateParamsButtonPressed = this.UpdateParamsButtonPressedAuditory;
+      this.UpdateParamsButtonPressed = this.UpdateParamsButtonPressedAuditory;
     } else {
       //this.stim_form = this.stim_form_ele;
       DeviceStartupComponent.parentCurTrial = DeviceStartupComponent.parentCurTrialEle;
@@ -83,12 +105,32 @@ export class DeviceStartupComponent {
       per_cor: 'N/A'
   }; // This will be the dictionary of current trial data for auditory experiments
 
+  
+  //static tableFields: object = {};//Object.keys(DevicparentCurTrialAuditory)
+  /*[
+      { key: 'sess_time', label: 'Time (min)'},
+      { key: 'trial_n', label: 'Number' },
+      { key: 'trial_type', label: 'Type' },
+      { key: 'tone_duration', label: 'Tone Duration' },
+      { key: 'forced', label: 'Forced' },
+      { key: 'trial_res', label: 'Response' },
+      { key: 'per_cor', label: 'Correct (%)' }
+  ];*/
   // Flags
   connectFlags = [
     false, // Arduino Connect Flag (true when connected, false when disconnected)
     false, // Gibson Connect Flag ("...")
     false, // Initial Training Flag (true when selected, false when not selected)
     true // override flag for auditory experiment where arduino controls stim and not gibson
+  ];
+  tableFields = [
+    { key: 'sess_time', label: 'Time (min)'},
+    { key: 'trial_n', label: 'Number' },
+    { key: 'trial_type', label: 'Type' },
+    { key: 'forced', label: 'Forced' },
+    { key: 'tone_duration', label: 'Tone Duration' },
+    { key: 'trial_res', label: 'Response' },
+    { key: 'per_cor', label: 'Correct (%)' }
   ];
   observeOpenFlag = false; // flag for when the observable is opened
   isStimulatorVisible = false; // flag for visibility of the Gibson stimulator parameters, set to false for auditory experiment
@@ -123,14 +165,7 @@ export class DeviceStartupComponent {
   sess_conerr = new FormControl('3');
   SESS_params: any;
 
-  paramMap = {
-      "session_length": (v: string) => this.sess_len.setValue(v),
-      "response_time": (v: string) => this.sess_res_t.setValue(v),
-      "consecutive_error": (v: string) => this.sess_conerr.setValue(v),
-      "session_type": (v: string) => this.sess_type2 = v,
-      "experiment_type": (v: string) => this.sess_type1 = v,
-      "forced_trials": (v: string) => this.forced_type = v,
-  };
+  
 
   
 
@@ -313,7 +348,7 @@ export class DeviceStartupComponent {
   }
 
 
-  scrollToBot(incData) {
+  scrollToBot(incData: any) {
     /*
       This function is responsible for autoscrolling the content of the view-port unless the user
         has scrolled away from the bottom. A quality of life implementation for the amount of
@@ -478,34 +513,50 @@ export class DeviceStartupComponent {
       this.stim_form.get('tone_durationR')?.enable();
     }
   }
-  handleIncomingMessage(msg: string) {
-    const parts = msg.split(',');
-    console.log(parts);
 
-    if (parts[0] === "GET" && parts.length === 3) {
-      const paramName = parts[1];
-      const paramValue = parts[2];
-
-      this.updateParamFromArduino(paramName, paramValue);
-    }
-  }
   updateParamFromArduino(name: string, value: string) {
-    //const handlers: { [key: string]: (v: string) => void } = {
-    //  "session_length": (v) => this.sess_len.setValue(v),
-    //  "response_time": (v) => this.sess_res_t.setValue(v),
-    //  "consecutive_error": (v) => this.sess_conerr.setValue(v),
-    //  "session_type": (v) => this.sess_type2 = v,
-    //  "experiment_type": (v) => this.sess_type1 = v,
-    //  "forced_trials": (v) => this.forced_type = v,
-    //};
-    console.log(name)
-    console.log(this.sess_conerr)
-    //console.log(handlers[name](value))
-    if (this.paramMap[name]) {
-      this.paramMap[name](value);
+    // updates UI elements based if parameters loaded on Arduino differ from default UI values
+    const handlers: { [key: string]: (v: string) => void } = {
+      "session_length": (v) => this.sess_len.setValue(v),
+      "response_time": (v) => this.sess_res_t.setValue(v),
+      "consecutive_error": (v) => this.sess_conerr.setValue(v),
+      "session_type": (v) => this.sess_type2 = v,
+      "experiment_type": (v) => this.sess_type1 = v,
+      "forced_trials": (v) => this.forced_type = v,
+    };
+    const handler = handlers[name];
+    if (handler) {
+      handler(value);
     } else {
-      console.warn("Unknown parameter from Arduino:", name);
+      console.warn('Unhandled parameter: ', name);
     }
+    //const formFields = document.querySelectorAll('.cus-card mat-form-field');
+    //console.log(formFields)
+    //const cards = document.querySelectorAll('.cus-card');
+    //cards.forEach((card) => {
+    //  const header = card.querySelector('.cus-card-header, .card-title'); // your header classes
+    //  if (header && header.textContent?.trim() === 'Session Parameters') {
+    //    const formFields = card.querySelectorAll('mat-form-field');
+    //    formFields.forEach((field) => {
+    //    console.log('Found field');
+        
+      // Do whatever you need with each field here
+    //    });
+    //  }
+    //});
+    
+
+    
+    //console.log(this.sess_conerr)
+    //console.log(handlers[name](value))
+    //if (this.paramMap[name]) {
+    //  this.paramMap[name](value);
+    //} else {
+    //  console.warn("Unknown parameter from Arduino:", name);
+    //}
+    }
+    ngOnDestroy() {
+      this.sseSub?.unsubscribe();
     }
 }
 
