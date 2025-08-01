@@ -1,7 +1,7 @@
 
 # experiment_handlers.py
 
-
+''' This section corresponds to the Auditory detection/discrimination experiment '''
 
 session_params_auditory = {
         "session_type": "Initial Training",
@@ -38,6 +38,18 @@ session_data_auditory = { #uses integers and/or floats (not strings) to populate
 		"tone_duration":[],
         "randomized":[]
 }
+column_names_auditory = [
+    'Time (sec)',
+    'Trial',
+    'Type',
+    'Forced',
+    'Response',
+    'Response Time (sec)',
+    'Correct',
+    'Percent (%)',
+    'Tone Duration (msec)',
+    'Randomized'
+]
 
 def handle_data_auditory(self, line):
     """serial port "listener" to perform specific actions depending on what arduino writes to port

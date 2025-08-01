@@ -5,6 +5,9 @@
 #include "DOOR.h"
 #include "SPOUT.h"
 
+#define COMMAND_BUFFER_SIZE 30
+char commandBuffer[COMMAND_BUFFER_SIZE];
+
 //contant and variable intializations
 const long baudrate = 9600;
 const int doorR = 4; //right door (output)
@@ -82,6 +85,7 @@ void setup() {
   Serial.print("Connected,");
   //Serial.println("Waiting for input...");
   //delay(200);
+  handleCommands();
   manualControl();
   startSession = millis();
   Serial.print("Start,");
@@ -786,6 +790,8 @@ void manualControl(){
                       else {
                         right_door.CLOSE();
                       }
+                      break;
+
                     case 'L':
                       left_spout.deliverReward();
                       Serial.println("Left port reward deliverd.");
@@ -1007,7 +1013,33 @@ void manualControl(){
               endSession();
               break;
             }
+
+            default: {
+              Serial.println(fbyte);
+              break;
+            }
       }
     }
   }
+}
+
+void handleCommands(){
+  int ch = 1;
+  while (ch) {
+    if (Serial.available()) {
+      String inString = Serial.readStringUntil('\r\n');
+      //Serial.println(sizeof(inString)/sizeof(inString[0]));
+      Serial.println(commandBuffer);
+      inString.toCharArray(commandBuffer, COMMAND_BUFFER_SIZE);
+      commandBuffer[inString.length()] = 0;
+      Serial.println(commandBuffer);
+      //Serial.println(inString);
+      //Serial.println(commandBuffer);
+      //sizeof(trialType)/sizeof(trialType[0]);
+      //Serial.println(inString[0]);
+      //Serial.println(inString[1]);
+      //Serial.println(sizeof(inString)/sizeof(inString[0]));
+    }
+  }
+  
 }

@@ -27,9 +27,18 @@ from queue import Queue, Empty
 
 # Other Python file imports
 import serial_functions as s #serial port communication functions for both arduino and stimulator
-import helper_functions as h #additional helpers functions
+#import helper_functions as h #additional helpers functions
+from helper_functions import saveSessionData
 from serial_thread_functions import ArduinoManager, findPorts
-from experiment_handlers import handle_data_auditory, session_params_auditory, stim_params_auditory, current_trial_data_auditory, session_data_auditory
+from experiment_handlers import (
+    handle_data_auditory, 
+    session_params_auditory, 
+    stim_params_auditory, 
+    current_trial_data_auditory, 
+    session_data_auditory,
+	column_names_auditory
+
+)
 """
 	Variable declarations:
 	
@@ -108,7 +117,13 @@ stimParams = { #uses integers and floats (not strings) to populate dict
 #ard = serial.Serial() # A serial port object responsible for communication with the Arduino
 ard_manager = ArduinoManager()
 ard_manager.assign_handler(handle_data_auditory)
-ard_manager.initialize_experiment(session_params_auditory, stim_params_auditory, current_trial_data_auditory, session_data_auditory)
+ard_manager.initialize_experiment(
+	session_params_auditory, 
+	stim_params_auditory, 
+	current_trial_data_auditory, 
+	session_data_auditory,
+	column_names_auditory)
+
 #gib = serial.Serial() # A serial port object responsible for communication with the Gibson
 app = Flask(__name__) # This creates the application as a Flask object
 CORS(app) # Implements CORS protocol to the application
@@ -396,8 +411,11 @@ def WriteToCOMport():
 
 	else:
 		if request.form["string"] == "export": #export button pressed
-			print(sessionData)
-			h.saveSessionDataUI(sessionData, y) #saves session data
+			#print(sessionData)
+			#h.saveSessionDataUI(sessionData, y) #saves session data
+			ard_manager.serial_queue.put("aving session data...")
+			msg = saveSessionData(ard_manager.session_data, ard_manager.column_names)
+			ard_manager.serial_queue.put(msg)
 
 	return {"task":request.form["task"],"message":"success"}
 		

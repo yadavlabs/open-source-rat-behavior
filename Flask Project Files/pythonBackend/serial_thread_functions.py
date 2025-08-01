@@ -12,6 +12,7 @@ from queue import Queue
 #serial_stop_event = threading.Event() # Event to stop the serial thread
 #serial_connected_event = threading.Event() # Event to signal that the serial port is connected
 
+# dictionary of commands for manually controlling operant chamber components and starting/stopping/pausing experiment
 COMMAND_MAP = {
     "left-door": lambda state: f"D{int(state == 'true')}",
     "right-door": lambda state: f"d{int(state == 'true')}",
@@ -24,6 +25,8 @@ COMMAND_MAP = {
     "stop": lambda state: "Q",
     "start": lambda state: "b"
 }
+
+# dictionary of "GET" commands for returning parameters currently set on the Arduino
 GET_PARAM_MAP = {
     "session_length": "G1",
     "response_time": "G2",
@@ -35,6 +38,7 @@ GET_PARAM_MAP = {
     "tone_durationR": "G8"
 }
 
+# dictionary of "SET" commands for setting/changing parameters on the Arduino
 SET_PARAM_MAP = {
     "session_length": lambda new_val: f"P1{new_val}",
     "response_time": lambda new_val: f"P2{new_val}",
@@ -46,9 +50,8 @@ SET_PARAM_MAP = {
     "tone_durationR": lambda new_val: f"P8{new_val}"
 }
 
-
-
-def findPorts(): #finds and returns devices ocnnected to serial port
+#finds and returns devices ocnnected to serial port
+def findPorts(): 
 	ports = list(port_list.comports())
 	
 	return ports
@@ -56,16 +59,17 @@ def findPorts(): #finds and returns devices ocnnected to serial port
 
 class ArduinoManager:
     def __init__(self):
-        self.ard = None
-        self.serial_thread = None
-        self.serial_queue = Queue()
-        self.serial_stop_event = threading.Event()
-        self.serial_connected_event = threading.Event()
-        self._handle_data = lambda line: None # default
-        self.session_params = {}
-        self.stim_params = {}
-        self.current_trial_data = {}
-        self.session_data = {}
+        self.ard = None # serial port object
+        self.serial_thread = None # thread for serial communication
+        self.serial_queue = Queue() # queue for serial data to be placed
+        self.serial_stop_event = threading.Event() # event to stop serial thread
+        self.serial_connected_event = threading.Event() # event to signal that the arduino is connected
+        self._handle_data = lambda line: None # default, function for handling received data from the arduino 
+        self.session_params = {} # dictionary of session parameters
+        self.stim_params = {} # dictionary of stimulation parameters
+        self.current_trial_data = {} # dictionary of current trial data
+        self.session_data = {} # dictionary of session data
+        self.column_names = [] # list of column names for exporting session data
         #print(f"Active threads before thread finishes: {threading.active_count()}")
         active_threads = threading.enumerate()
         for thread in active_threads:
@@ -73,16 +77,15 @@ class ArduinoManager:
                 print(f"Thread Name: {thread.name}, is alive: {thread.is_alive()}")
                 thread.join()
     
-    def initialize_experiment(self, session_params, stim_params, current_trial_data, session_data):
+    # set properties specific to experiment, found in experiment_handlers.py
+    def initialize_experiment(self, session_params, stim_params, current_trial_data, session_data, column_names):
         self.session_params = session_params
         self.stim_params = stim_params
         self.current_trial_data = current_trial_data
         self.session_data = session_data
+        self.column_names = column_names
 
-    #def initialize_session_data(self, session_data):
-    #    self.session_data = session_data
-    
-
+    # listener thread for reading incoming serial port data
     def _serial_listener(self):
         print("[THREAD] Serial listener started.")
         while not self.serial_stop_event.is_set():
@@ -101,6 +104,7 @@ class ArduinoManager:
             time.sleep(0.1)  # Sleep to prevent busy waiting
         print("[THREAD] Serial listener stopped.")
 
+    # connect to arduino and start listener
     def connect(self, port="COM6", baudrate=9600):
         if self.ard and self.ard.is_open:
             return "Arduino already connected."
@@ -113,7 +117,8 @@ class ArduinoManager:
             return "Establishing connection"
         except Exception as e:
             return f"Error connecting to Arduino: {e}"
-        
+    
+    # disconnect from arduino and stop listener
     def disconnect(self):
         if self.ard and self.ard.is_open:
             self.serial_stop_event.set()
@@ -124,12 +129,13 @@ class ArduinoManager:
             return "Disconnected from Arduino."
         return "Arduino is not connected."
     
+    # send command
     def send_command(self, component, state):
         #command = COMMAND_MAP[component](state)
         print(COMMAND_MAP[component](state))
         self.write_utf(COMMAND_MAP[component](state))
 
-
+    # write utf-8 encoded data to arduino
     def write_utf(self, data):
         if self.ard and self.ard.is_open:
             try:
@@ -139,6 +145,7 @@ class ArduinoManager:
                 return f"Error sending command: {e}"
         return "Arduino is not connected."
     
+    # requests arduino to return all relevent parameters currently loaded
     def get_loaded_params(self):
         # get session parameters, will be updated in _handle_data function
         # value in python are different from value loaded on arduino 
@@ -153,6 +160,7 @@ class ArduinoManager:
                 self.write_utf(GET_PARAM_MAP[param])
             #print("[Arduino] " + param + ": " + GET_PARAM_MAP[param])
 
+    # update parameter(s) using a dictionary "params"
     def update_params(self, params):
         for param, val in params.items():
             #print(param + ": " + val)
@@ -179,14 +187,13 @@ class ArduinoManager:
             #    self.send_command(SET_PARAM_MAP[param](val))
 
 
-
-    
     def get_queue(self):
         return self.serial_queue
     
     def is_connected(self):
         return self.ard and self.ard.is_open
     
+    # sets the experiment handler function (found in experiment_handlers.py)
     def assign_handler(self, handler_fnc):
         self._handle_data = handler_fnc.__get__(self, ArduinoManager)
         
