@@ -139,7 +139,7 @@ class ArduinoManager:
     def write_utf(self, data):
         if self.ard and self.ard.is_open:
             try:
-                self.ard.write((data + '\r\n').encode('utf-8'))  # Send command to Arduino
+                self.ard.write((data).encode('utf-8'))  # Send command to Arduino
                 return "Command sent."
             except serial.SerialException as e:
                 return f"Error sending command: {e}"

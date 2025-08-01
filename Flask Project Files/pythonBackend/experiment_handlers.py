@@ -101,6 +101,7 @@ def handle_data_auditory(self, line):
             
         if data[1] == "2": #right trial, no stimulation for detection experiment
             if self.session_params["experiment_type"] == "Discrimination" and self.session_params["session_type"] != "Initial Training":
+                self.current_trial_data["tone_duration"] = self.stim_params["tone_durationR"]
                 self.session_data["tone_duration"].append(self.stim_params["tone_durationR"])
                 #self.session_data["amplitude"].append([])
                 #self.session_data["frequency"].append([])

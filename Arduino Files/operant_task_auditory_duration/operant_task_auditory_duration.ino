@@ -34,7 +34,7 @@ unsigned long responseT;
 unsigned long runTime =  3600000; //length of session (msec)
 unsigned long responseTime = 10000; //unforced trial response time (msec)
 unsigned int unresponsive = 0; //initialize check for non-response trial
-int delayL = 28;//30;//15; //left water reward time (msec)
+int delayL = 29;//28;//30;//15; //left water reward time (msec)
 int delayR = 32;//27;//13; // right water reward time (msec) 
 int readDelay = 10; //delay between reading matlab serial port data (msec)
 
@@ -85,7 +85,7 @@ void setup() {
   Serial.print("Connected,");
   //Serial.println("Waiting for input...");
   //delay(200);
-  handleCommands();
+  //handleCommands();
   manualControl();
   startSession = millis();
   Serial.print("Start,");
@@ -699,7 +699,7 @@ void manualControl(){
                   break;
                 }
                 case '0': {
-                  left_door.CLOSE();
+                  right_door.CLOSE();
                   Serial.println("Right Door Closed.");
                   break;
                 }
