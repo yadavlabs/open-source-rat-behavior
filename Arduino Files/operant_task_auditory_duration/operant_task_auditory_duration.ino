@@ -957,16 +957,18 @@ void manualControl(){
                   break;
 
                 case '4': //get alternating ports setting ("G4")
-                  if(acheck == 1){
+                  Serial.print("GET,session_type,");
+                  Serial.println((acheck == 1) ? "Auditory Experiment" : "Initial Training");
+                  //if(acheck == 1){
                     //Serial.println("Alternating ports is enabled.");
-                    Serial.print("GET,session_type,");
-                    Serial.println("Initial Training");
-                  }
-                  else if(acheck == 2){
+                    
+                  //  Serial.println("Initial Training");
+                  //}
+                  //else if(acheck == 2){
                     //Serial.println("Alternating ports is disabled.");
-                    Serial.print("GET,session_type,");
-                    Serial.println("Auditory Experiment");
-                  }
+                  //  Serial.print("GET,session_type,");
+                  //  Serial.println("Auditory Experiment");
+                  //}
                   break;
 
                 case '5': //get force trials setting ("G5")
