@@ -503,7 +503,12 @@ void stim(int stimType){
   Serial.print("Stim,");
   Serial.println(stimType);
   if(dcheck == 0 && acheck == 1){ // detection
-    playTone(toneDurationL);
+    if(stimType == 1){
+      playTone(toneDurationL);
+    }
+    else {
+      delay(2000);
+    }
   }
   else if(dcheck == 1 && acheck == 1){ //discrimination
     if(stimType == 1){ //left port stim

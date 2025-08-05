@@ -73,7 +73,7 @@ def saveSessionData(session_data, column_names):
     if not file_name:
         print("[Flask] File save cancelled.")
         return "File save cancelled"
-    print("ehrer")
+
     print(file_name)
     df = pd.DataFrame(session_data)
     df.columns = column_names
@@ -107,3 +107,22 @@ def get_save_path_via_dialog_window(default_name=('Rat_' + datetime.now().strfti
     root.destroy()
 
     return file_name if file_name else None
+
+def get_session_summary(session_data):
+    """
+    Generate a summary of the session data.
+    """
+    if not session_data:
+        return "No session data available."
+
+    total_trials = len(session_data)
+    correct_trials = sum(1 for trial in session_data if trial['Correct'])
+    percent_correct = (correct_trials / total_trials) * 100 if total_trials > 0 else 0
+
+    summary = {
+        'Total Trials': total_trials,
+        'Correct Trials': correct_trials,
+        'Percent Correct': percent_correct
+    }
+
+    return summary

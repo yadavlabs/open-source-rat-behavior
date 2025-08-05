@@ -1,4 +1,5 @@
-
+import numpy as np
+import sounddevice as sd
 # experiment_handlers.py
 
 ''' This section corresponds to the Auditory detection/discrimination experiment '''
@@ -149,14 +150,18 @@ def handle_data_auditory(self, line):
             if self.session_params["session_type"] == "Initial Training":
                 self.serial_queue.put("No stim.")
             elif self.session_params["experiment_type"] == "Discrimination":
+                #play_pure_tone(frequency=11300, duration=float(self.stim_params["tone_durationL"])/1000, amplitude=0.5)
                 self.serial_queue.put("Left port stim")
             else:
+                #play_pure_tone(frequency=11300, duration=float(self.stim_params["tone_durationL"])/1000, amplitude=0.5)
                 self.serial_queue.put("Stim")
         else:
             print("No stim")
             if self.session_params["session_type"] == "Initial Training" or self.session_params["experiment_type"] == "Detection":
                 self.serial_queue.put("No stim")
             else:
+                print(float(self.stim_params["tone_durationR"])/1000)
+                #play_pure_tone(frequency=11300, duration=float(self.stim_params["tone_durationR"])/1000, amplitude=0.5)
                 self.serial_queue.put("Right port stim")
                 
                     
@@ -269,3 +274,18 @@ def handle_data_auditory(self, line):
     else:
         print("[Arduino] " + data[0])
         self.serial_queue.put(data[0])
+
+
+def play_pure_tone(frequency, duration, sample_rate=44100, amplitude=0.5):
+    """
+    Play a pure tone at a specified frequency and duration.
+    
+    :param frequency: Frequency of the tone in Hz
+    :param duration: Duration of the tone in seconds
+    :param sample_rate: Sample rate in Hz
+    :param amplitude: Amplitude of the tone (0.0 to 1.0)
+    """
+    t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
+    tone = amplitude * np.sin(2 * np.pi * frequency * t)  # Generate sine wave
+    sd.play(tone, samplerate=sample_rate)
+    sd.wait()  # Wait until sound has finished playing
