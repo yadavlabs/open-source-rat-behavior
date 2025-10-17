@@ -59,11 +59,9 @@ export class SSEService {
         }
         
         const incSessData = JSON.parse(e.data)["item2"]; // parses the current trial data
-        console.log("HEI")
         if (typeof incSessData !== 'undefined') {
-          console.log(incSessData)
+          //console.log(incSessData)
           DeviceStartupComponent.parentCurTrial = incSessData;
-          //console.log("DSGFDSFG")
         }
         
         //DeviceStartupComponent.parentCurTrial = incSessData; // redefines the current trial data with the newly parsed data
@@ -94,7 +92,7 @@ export class SSEService {
 
   handleIncomingData(data: string){
     const parts = data.split(','); // data will look like: "GET,parameter_name,parameter_value", example: "GET,session_length,60"
-    console.log(parts);
+    //console.log(parts);
     if (parts[0] === "GET" && parts.length === 3) {
       const name = parts[1];
       const value = parts[2];

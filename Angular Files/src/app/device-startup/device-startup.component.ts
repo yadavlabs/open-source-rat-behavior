@@ -45,8 +45,8 @@ export class DeviceStartupComponent {
       
 
       DeviceStartupComponent.parentCurTrial = DeviceStartupComponent.parentCurTrialAuditory;
-      console.log(this.connectFlags)
-      console.log(this.tableFields)
+      //console.log(this.connectFlags)
+      //console.log(this.tableFields)
       //console.log(DeviceStartupComponent.parentCurTrial[this.tableFields[1].key])
       //console.log(this.tableFields[0].key)
       this.stim_label_1_name = "Enter Tone Duration (ms)";
@@ -54,7 +54,7 @@ export class DeviceStartupComponent {
       this.stim_val_1_name = "tone_duration";
       this.stim_val_2_name = "tone_durationL";
       this.stim_val_3_name = "tone_durationR";
-      console.log(this.stim_val_1_name)
+      //console.log(this.stim_val_1_name)
       this.exp_type2 = ["Initial Training", "Auditory Experiment"];
       //this.stim_form = this.stim_form_auditory;
       this.stim_form.get('stim_A')?.setValue('500');
@@ -232,8 +232,8 @@ export class DeviceStartupComponent {
       this.sseService.startCOMS().subscribe(x => { this.inc_data = x });
       this.observeOpenFlag = true;
     }
-    console.log(this.observeOpenFlag)
-    console.log(this.connectFlags[flag])
+    //console.log(this.observeOpenFlag)
+    //console.log(this.connectFlags[flag])
   }
 
 

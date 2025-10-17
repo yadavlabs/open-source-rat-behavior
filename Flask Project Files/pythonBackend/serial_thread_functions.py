@@ -167,7 +167,6 @@ class ArduinoManager:
             #print("Command: " + SET_PARAM_MAP[param](val))
             #print(val != self.session_params[param])
             #self.send_command(SET_PARAM_MAP[param](val))
-            print("here")
             update_val = False
             if (param in self.session_params) and (val != self.session_params[param]):
                 update_val = True
