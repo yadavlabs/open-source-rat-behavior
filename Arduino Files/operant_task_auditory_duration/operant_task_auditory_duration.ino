@@ -34,8 +34,8 @@ unsigned long responseT;
 unsigned long runTime =  3600000; //length of session (msec)
 unsigned long responseTime = 10000; //unforced trial response time (msec)
 unsigned int unresponsive = 0; //initialize check for non-response trial
-int delayL = 29;//28;//30;//15; //left water reward time (msec)
-int delayR = 32;//27;//13; // right water reward time (msec) 
+int delayL = 30;//29;//28;//30;//15; //left water reward time (msec)
+int delayR = 33;//27;//13; // right water reward time (msec) 
 int readDelay = 10; //delay between reading matlab serial port data (msec)
 
 unsigned long toneDurationL = 500; //duration of auditory stimulus for left port (ms)
@@ -64,7 +64,7 @@ int B = 0; //left (1), right (2) or unresponsive (5) beam break;
 int M = 0; //forced (1) or unforced (0) trial
 
 
-int trialType[4] = {1,2,1,2}; //left port (1) or right port (2) trial
+int trialType[6] = {1,2,1,2,1,2};//{1,2,1,2,1,1};//{1,1,1,1,2,1};// //left port (1) or right port (2) trial
 const int nT = sizeof(trialType)/sizeof(trialType[0]);
 int entryT = 0; //trialType index
 int setTrial; //variable for chosen trial from trialType[entryT]
@@ -80,12 +80,9 @@ void setup() {
   
   Serial.begin(baudrate);
   randomSeed(analogRead(0));
-  //delay(500);
+
   Serial.flush();
   Serial.print("Connected,");
-  //Serial.println("Waiting for input...");
-  //delay(200);
-  //handleCommands();
   manualControl();
   startSession = millis();
   Serial.print("Start,");
@@ -97,12 +94,6 @@ void setup() {
     shuffleArray(trialType,nT);
   }
   setTrial = trialType[entryT];
-  //for(int i = 0;i<=3;i++){
-  //  Serial.println(trialType[i]);
-  //  delay(100);
-  //}
-  //Serial.println(entryT);
-  //Serial.println(setTrial);
 }
 
 void loop() {
@@ -185,8 +176,8 @@ void loop() {
         T = L + R;
         N = L + R + U;
         P = C/(T-F);
-        left_door.CLOSE();//digitalWrite(doorL,HIGH);
-        house_light.OFF();//digitalWrite(light,HIGH);
+        left_door.CLOSE();
+        house_light.OFF();
         endSession();
       }
       Serial.print("Response,");
@@ -194,14 +185,14 @@ void loop() {
       Serial.print(",");
       Serial.print(setTrial);
       Serial.println(",5");
-      left_spout.deliverReward(); //deliverReward(solL);
+      left_spout.deliverReward();
       //shortTone();
       L++;
       B = 1;
       E = 0;
       delay(500);
       delay(5500);
-      left_door.CLOSE();//digitalWrite(doorL,HIGH);     //close door
+      left_door.CLOSE();    //close door
     }
     else if(setTrial == 2){
     
@@ -219,8 +210,8 @@ void loop() {
         T = L + R;
         N = L + R + U;
         P = C/(T-F);
-        right_door.CLOSE();//digitalWrite(doorR,HIGH);
-        house_light.OFF();//digitalWrite(light,HIGH);
+        right_door.CLOSE();
+        house_light.OFF();
         endSession();
       }
       Serial.print("Response,");
@@ -228,14 +219,14 @@ void loop() {
       Serial.print(",");
       Serial.print(setTrial);
       Serial.println(",5");
-      right_spout.deliverReward();//deliverReward(solR);
+      right_spout.deliverReward();
       //shortTone();
       R++;
       B = 2;
       E = 0;
       delay(500);
       delay(5500);
-      right_door.CLOSE();//digitalWrite(doorR,HIGH);     //close door  
+      right_door.CLOSE();     //close door  
     }
   }
   
@@ -339,7 +330,7 @@ void loop() {
   }*/
   if(fcheck == 0){ //forced trial off
     entryT++;
-    if(entryT > 3){
+    if(entryT > 5){
       if(acheck == 1){
         shuffleArray(trialType,nT);
       }
@@ -359,7 +350,7 @@ void loop() {
     if(E == 0){
       
       entryT++;
-      if(entryT > 3){
+      if(entryT > 5){
         if(acheck == 1){ //alternating ports off, shuffle array, else start at beginning
           shuffleArray(trialType,nT);
         }
@@ -518,7 +509,7 @@ void stim(int stimType){
       playTone(toneDurationR);
     }
   }
-  delay(1000);
+  delay(500);
   
 }
 
