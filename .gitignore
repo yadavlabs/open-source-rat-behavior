@@ -148,3 +148,5 @@ dist
 
 .venv/
 **pycache**
+
+/Data
