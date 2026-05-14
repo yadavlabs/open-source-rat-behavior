@@ -23,7 +23,8 @@ COMMAND_MAP = {
     "test-sensors": lambda state: f"{'J' if state == 'true' else 'K'}",
     "pause": lambda state: f"{'p' if state == 'true' else 'u'}",
     "stop": lambda state: "Q",
-    "start": lambda state: "b"
+    "start": lambda state: "b",
+    "test-stim": lambda state: "S"
 }
 
 # dictionary of "GET" commands for returning parameters currently set on the Arduino
@@ -34,8 +35,9 @@ GET_PARAM_MAP = {
     "session_type": "G4",
     "forced_trials": "G5",
     "experiment_type": "G6",
-    "tone_durationL": "G7",
-    "tone_durationR": "G8"
+    "vibration_levelL": "G7",
+    "vibration_levelR": "G8",
+    "vibration_length": "G9"
 }
 
 # dictionary of "SET" commands for setting/changing parameters on the Arduino
@@ -46,8 +48,9 @@ SET_PARAM_MAP = {
     "session_type": lambda new_val: f"P4{int(new_val == 'Initial Training')+1}",
     "forced_trials": lambda new_val: f"P5{int(new_val == 'Yes')}",
     "experiment_type": lambda new_val: f"P6{int(new_val == 'Discrimination')}",
-    "tone_durationL": lambda new_val: f"P7{new_val}",
-    "tone_durationR": lambda new_val: f"P8{new_val}"
+    "vibration_levelL": lambda new_val: f"P7{new_val}",
+    "vibration_levelR": lambda new_val: f"P8{new_val}",
+    "vibration_length": lambda new_val: f"P9{new_val}"
 }
 
 #finds and returns devices ocnnected to serial port
@@ -158,7 +161,7 @@ class ArduinoManager:
         for param in self.stim_params:
             if param in GET_PARAM_MAP:
                 self.write_utf(GET_PARAM_MAP[param])
-            #print("[Arduino] " + param + ": " + GET_PARAM_MAP[param])
+                #print("[Arduino] " + param + ": " + GET_PARAM_MAP[param])
 
     # update parameter(s) using a dictionary "params"
     def update_params(self, params):

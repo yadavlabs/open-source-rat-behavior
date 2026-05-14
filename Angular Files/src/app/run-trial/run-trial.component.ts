@@ -60,7 +60,7 @@ export class RunTrialComponent {
         ($event.checked) is sent as an argument, alongside the destination device (device), and
         a string to indicate which slider was changed (butString).
     */
-    console.log(this.childTrialTable)
+    //console.log(this.childTrialTable)
     // The POST request, where the return from the RESTful API is captured
     this.flaskService.writeToCOMport(butString, device, $event.checked).subscribe(data => { this.post_res = data });
 

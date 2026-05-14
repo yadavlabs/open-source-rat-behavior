@@ -299,13 +299,12 @@
 
       <!-- (2/7) STIMULUS FREQUENCY FORM FIELD: Allows the user to input the desired frequency of the stimulus. -->
       <mat-form-field 
-      *ngIf="isStimulatorVisible"
        class="cus-form-field">
         <mat-label>
-          Enter Stimulus Frequency (Hz)
+          {{ stim_label_4_name }}
         </mat-label>
 
-        <input matInput formControlName="stim_fre">
+        <input matInput [formControlName]="stim_val_4_name">
       </mat-form-field>
 
       <!-- (3/7) STIMULUS PULSE WIDTH FORM FIELD: Allows the user to input the desired pulse width of the stimulus. -->
@@ -359,7 +358,7 @@
           <!-- (7a/7) LEFT PORT CV FORM FIELD: Allows the user to input the desired left port CV for a discrimination experiment. -->
           <mat-form-field class="cus-form-field">
             <mat-label>
-              Enter Left Port {{ stim_label_2_name}}
+              Left Port {{ stim_label_2_name}}
             </mat-label>
 
             <input matInput [formControlName]=stim_val_2_name>

@@ -109,8 +109,8 @@
 
       <!-- (1/8) TEST STIMULATOR BUTTON: Allows the user to test whether the stimulation is working. -->
       <button mat-raised-button
-        (click)="SessionButtonsPressed('STIM','Gibson')"
-        [disabled]="!childFlags[1] || man_flag"
+        (click)="SessionButtonsPressed('test-stim','Arduino')"
+        [disabled]="!childFlags[0] || man_flag"
         class="cus-button">
           Test Stimulation
       </button>

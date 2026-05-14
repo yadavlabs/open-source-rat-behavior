@@ -2,9 +2,9 @@ import numpy as np
 import sounddevice as sd
 # experiment_handlers.py
 
-''' This section corresponds to the Auditory detection/discrimination experiment '''
+''' This section corresponds to the Vibration detection/discrimination experiment '''
 
-session_params_auditory = {
+session_params_vibration = {
         "session_type": "Initial Training",
 		"experiment_type": "Detection",
         "session_length": "60",
@@ -12,47 +12,51 @@ session_params_auditory = {
         "forced_trials": "Yes",
         "consecutive_error": "3"
 }
-stim_params_auditory = {
-	"tone_durationL": "500",
-	"tone_durationR": "100",
+stim_params_vibration = {
+	"vibration_levelL": "150",
+	"vibration_levelR": "100",
+    "vibration_length": "2000",
     "randomize": "0"
 }
-current_trial_data_auditory = {
+current_trial_data_vibration = {
         "sess_time":"-",
         "trial_n":"-",
         "trial_type":"-",
         "forced":"-",
-        "tone_duration":"-",
+        "vibration_level":"-",
+        "vibration_length":"-",
         "trial_res":"-",
         "per_cor":"-"
 }
-# dictionary to store auditory session data to export/save
-session_data_auditory = { #uses integers and/or floats (not strings) to populate dict
+# dictionary to store vibration session data to export/save
+session_data_vibration = { #uses integers and/or floats (not strings) to populate dict
         "trial_time":[],
         "trial_number":[],
         "trial_type":[],
         "forced":[],
+        "vibration_level":[],
+        "vibration_length":[],
+        "randomized":[],
         "response":[],
         "response_time":[],
         "correct":[],
-        "percent":[],
-		"tone_duration":[],
-        "randomized":[]
+        "percent":[]
 }
-column_names_auditory = [
+column_names_vibration = [
     'Time (sec)',
     'Trial',
     'Type',
     'Forced',
+    'Vibration Level',
+    'Vibration Length (ms)',
+    'Randomized',
     'Response',
     'Response Time (sec)',
     'Correct',
-    'Percent (%)',
-    'Tone Duration (msec)',
-    'Randomized'
+    'Percent (%)'
 ]
 
-def handle_data_auditory(self, line):
+def handle_data_vibration(self, line):
     """serial port "listener" to perform specific actions depending on what arduino writes to port
         # Inputs:
         #       ard              - serial port object for task arduino
@@ -86,7 +90,8 @@ def handle_data_auditory(self, line):
         self.current_trial_data["trial_n"] = trial_number
         self.current_trial_data["trial_type"] = "-"
         self.current_trial_data["forced"] = "-"
-        self.current_trial_data["tone_duration"] = "-"
+        self.current_trial_data["vibration_level"] = "-"
+        self.current_trial_data["vibration_length"] = "-"
         self.current_trial_data["trial_res"] = "-"
         #"sess_time"] = str(round(trial_time / 60,2)) #to minutes
         #self.current_trial_data["trial_n"] = data[2]
@@ -102,13 +107,16 @@ def handle_data_auditory(self, line):
             
         if data[1] == "2": #right trial, no stimulation for detection experiment
             if self.session_params["experiment_type"] == "Discrimination" and self.session_params["session_type"] != "Initial Training":
-                self.current_trial_data["tone_duration"] = self.stim_params["tone_durationR"]
-                self.session_data["tone_duration"].append(self.stim_params["tone_durationR"])
+                self.current_trial_data["vibration_level"] = self.stim_params["vibration_levelR"]
+                self.current_trial_data["vibration_length"] = self.stim_params["vibration_length"]
+                self.session_data["vibration_level"].append(self.stim_params["vibration_levelR"])
+                self.session_data["vibration_length"].append(self.stim_params["vibration_length"])
                 #self.session_data["amplitude"].append([])
                 #self.session_data["frequency"].append([])
                 #self.session_data["CV"].append([])
             else:
-                self.session_data["tone_duration"].append([])
+                self.session_data["vibration_level"].append([])
+                self.session_data["vibration_length"].append([])
                 #self.session_data["amplitude"].append([])
                 #self.session_data["frequency"].append([])
                 #self.session_data["CV"].append([])
@@ -119,15 +127,18 @@ def handle_data_auditory(self, line):
                 #        randomizeAmplitude(gib, stimParams, y)
                 #print("HERE")
                 #print(stimParams["tone_durationL"])
-                self.current_trial_data["tone_duration"] = self.stim_params["tone_durationL"]
+                self.current_trial_data["vibration_level"] = self.stim_params["vibration_levelL"]
+                self.current_trial_data["vibration_length"] = self.stim_params["vibration_length"]
                 #currentTrialData["stim_fre"] = str(stimParams["frequency"])
                 #currentTrialData["CV"] = str(stimParams["CV"])
-                self.session_data["tone_duration"].append(self.stim_params["tone_durationL"])
+                self.session_data["vibration_level"].append(self.stim_params["vibration_levelL"])
+                self.session_data["vibration_length"].append(self.stim_params["vibration_length"])
                 #self.session_data["amplitude"].append(stimParams["amplitude"])
                 #self.session_data["frequency"].append(stimParams["frequency"])
                 #self.session_data["CV"].append(stimParams["CV"])
             else:
-                self.session_data["tone_duration"].append([])
+                self.session_data["vibration_level"].append([])
+                self.session_data["vibration_length"].append([])
                 #self.session_data["amplitude"].append([])
                 #self.session_data["frequency"].append([])
                 #self.session_data["CV"].append([])
@@ -160,7 +171,7 @@ def handle_data_auditory(self, line):
             if self.session_params["session_type"] == "Initial Training" or self.session_params["experiment_type"] == "Detection":
                 self.serial_queue.put("No stim")
             else:
-                print(float(self.stim_params["tone_durationR"])/1000)
+                print(float(self.stim_params["vibration_levelR"])/1000)
                 #play_pure_tone(frequency=11300, duration=float(self.stim_params["tone_durationR"])/1000, amplitude=0.5)
                 self.serial_queue.put("Right port stim")
                 

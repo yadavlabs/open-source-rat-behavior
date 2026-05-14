@@ -10,7 +10,7 @@ import { Subscription } from 'rxjs';
 // Importing interfaces
 import { postDic } from '../postDic';
 import { DropDownInfo } from './DropDownInfo';
-import { CurrentTrialDataEle, CurrentTrialDataAuditory } from './CurrentTrialData';
+import { CurrentTrialDataEle, CurrentTrialDataVibration } from './CurrentTrialData';
 
 @Component({
   selector: 'app-device-startup',
@@ -44,21 +44,24 @@ export class DeviceStartupComponent {
     if(this.isStimulatorVisible == false) {
       
 
-      DeviceStartupComponent.parentCurTrial = DeviceStartupComponent.parentCurTrialAuditory;
+      DeviceStartupComponent.parentCurTrial = DeviceStartupComponent.parentCurTrialVibration;
       //console.log(this.connectFlags)
       //console.log(this.tableFields)
       //console.log(DeviceStartupComponent.parentCurTrial[this.tableFields[1].key])
       //console.log(this.tableFields[0].key)
-      this.stim_label_1_name = "Enter Tone Duration (ms)";
-      this.stim_label_2_name = "Tone Duration";
-      this.stim_val_1_name = "tone_duration";
-      this.stim_val_2_name = "tone_durationL";
-      this.stim_val_3_name = "tone_durationR";
+      this.stim_label_1_name = "Vibration Level (PWM Value)";
+      this.stim_label_2_name = "Vibration Level";
+      this.stim_label_4_name = "Vibration Length (ms)";
+      this.stim_val_1_name = "vibration_level";
+      this.stim_val_2_name = "vibration_levelL";
+      this.stim_val_3_name = "vibration_levelR";
+      this.stim_val_4_name = "vibration_length";
       //console.log(this.stim_val_1_name)
-      this.exp_type2 = ["Initial Training", "Auditory Experiment"];
+      this.exp_type2 = ["Initial Training", "Vibration Experiment"];
       //this.stim_form = this.stim_form_auditory;
-      this.stim_form.get('stim_A')?.setValue('500');
-      this.stim_form.get('sess_cv')?.setValue(this.stim_form.get('tone_duration').value);
+      this.stim_form.get('stim_A')?.setValue('150');
+      this.stim_form.get('sess_cv')?.setValue(this.stim_form.get('vibration_level').value);
+      this.stim_form.get('stim_fre')?.setValue(this.stim_form.get('vibration_length').value);
       this.onSessChange = this.onSessChangeAud;
       this.onSessTypeChange = this.onSessTypeChangeAud;
       this.UpdateParamsButtonPressed = this.UpdateParamsButtonPressedAuditory;
@@ -95,11 +98,12 @@ export class DeviceStartupComponent {
       per_cor: 'N/A'
   }; // This will be the dictionary of current trial data
 
-  static parentCurTrialAuditory: CurrentTrialDataAuditory = {
+  static parentCurTrialVibration: CurrentTrialDataVibration = {
       sess_time: 'N/A',
       trial_n: 'N/A',
       trial_type: 'N/A',
-      tone_duration: 'N/A',
+      vibration_level: 'N/A',
+      vibration_length: 'N/A',
       forced: 'N/A',
       trial_res: 'N/A',
       per_cor: 'N/A'
@@ -128,7 +132,8 @@ export class DeviceStartupComponent {
     { key: 'trial_n', label: 'Number' },
     { key: 'trial_type', label: 'Type' },
     { key: 'forced', label: 'Forced' },
-    { key: 'tone_duration', label: 'Tone Duration' },
+    { key: 'vibration_level', label: 'Vibration Level' },
+    { key: 'vibration_length', label: 'Vibration Length' },
     { key: 'trial_res', label: 'Response' },
     { key: 'per_cor', label: 'Correct (%)' }
   ];
@@ -172,9 +177,11 @@ export class DeviceStartupComponent {
   // Stimulator variables
   stim_label_1_name = "Enter Stimulus Amplitude (uA)";
   stim_label_2_name = "CV";
+  stim_label_4_name = "Enter Vibration Length (ms)";
   stim_val_1_name = "stim_A";
   stim_val_2_name = "sess_cvL";
   stim_val_3_name = "sess_cvR";
+  stim_val_4_name = "vibration_length";
 
   //stim_form: FormGroup;
   stim_form = new FormGroup({
@@ -186,9 +193,10 @@ export class DeviceStartupComponent {
     stim_width: new FormControl({ value: '200', disabled: false }),
     stim_interval: new FormControl({ value: '50', disabled: false }),
     stim_pulNum: new FormControl({ value: '100', disabled: false }),
-    tone_duration: new FormControl({ value: '500', disabled: false }),
-    tone_durationL: new FormControl({ value: '500', disabled: false }),
-    tone_durationR: new FormControl({ value: '100', disabled: false })
+    vibration_level: new FormControl({ value: '150', disabled: false }),
+    vibration_levelL: new FormControl({ value: '150', disabled: false }),
+    vibration_levelR: new FormControl({ value: '100', disabled: false }),
+    vibration_length: new FormControl({ value: '2000', disabled: false })
   });
 
   //stim_form_auditory = new FormGroup({
@@ -291,9 +299,10 @@ export class DeviceStartupComponent {
       }
       else {
         this.STIM_params = [
-          this.stim_form.get('stim_duration').value, // Stimulus Duration (ms)
-          this.stim_form.get('sess_toneL').value, // Detection Tone - Left Port
-          this.stim_form.get('sess_toneR').value // Detection Tone - Right Port
+          this.stim_form.get('vibration_level').value, // Vibration level
+          this.stim_form.get('vibration_levelL').value, // Vibration level - Left Port
+          this.stim_form.get('vibration_levelR').value, // Vibration level - Right Port
+          this.stim_form.get('vibration_length').value // Vibration length
         ];
       }
 
@@ -326,16 +335,22 @@ export class DeviceStartupComponent {
       // The POST request itself, which captures the return response
       this.flaskService.updateParams(this.SESS_params, paramType).subscribe(x => { this.SESS_res = x });
       if (this.sess_type1 == "Detection"){
-        this.stim_form.get('tone_durationL')?.setValue(this.stim_form.get('tone_duration').value)
+        this.stim_form.get('vibration_levelL')?.setValue(this.stim_form.get('vibration_level').value)
+        this.stim_form.get('vibration_length')?.setValue(this.stim_form.get('vibration_length').value)
         //this.stim_form.get('sess_cv')?.setValue(this.stim_form.get('tone_duration').value);
       }
       else if (this.sess_type1 == "Discrimination"){
-        this.stim_form.get('tone_duration')?.setValue(this.stim_form.get('tone_durationL').value)
+        this.stim_form.get('vibration_levelL')?.setValue(this.stim_form.get('vibration_level').value)
+        //this.stim_form.get('vibration_levelR')?.setValue(this.stim_form.get('vibration_level').value)
+        this.stim_form.get('vibration_length')?.setValue(this.stim_form.get('vibration_length').value)
+        //this.stim_form.get('sess_cvL')?.setValue(this.stim_form.get('tone_durationL').value);
+        //this.stim_form.get('sess_cvR')?.setValue(this.stim_form.get('tone_durationR').value);
       }
       this.STIM_params = {
-        //tone_duration: this.stim_form.get('tone_duration').value, // Detection tone duration (ms)
-        tone_durationL: this.stim_form.get('tone_durationL').value, // Same as above, but used if discrimination is selected
-        tone_durationR: this.stim_form.get('tone_durationR').value
+        //vibration_level: this.stim_form.get('vibration_level').value, // Detection vibration level
+        vibration_levelL: this.stim_form.get('vibration_levelL').value, // Same as above, but used if discrimination is selected
+        vibration_levelR: this.stim_form.get('vibration_levelR').value,
+        vibration_length: this.stim_form.get('vibration_length').value // Vibration length
       }
       
       this.flaskService.updateParams(this.STIM_params, "Stimulator").subscribe(x => { this.STIM_res = x });
@@ -433,14 +448,16 @@ export class DeviceStartupComponent {
   }
 
   onSessChangeAud(selValue: any) {
+    console.log(selValue);
     if (selValue == "Initial Training") {
       this.connectFlags[2] = true; // changes the Initial Training flag for buttons/sliders
       console.log("Initial Training selected");
       // changes the properties of select form fields
-      this.stim_form.get('tone_duration')?.disable();
+      this.stim_form.get('vibration_level')?.disable();
       //this.stim_form.get('stim_fre')?.disable();
-      this.stim_form.get('tone_durationL')?.disable();
-      this.stim_form.get('tone_durationR')?.disable();
+      this.stim_form.get('vibration_levelL')?.disable();
+      this.stim_form.get('vibration_levelR')?.disable();
+      this.stim_form.get('vibration_length')?.disable();
       //this.stim_form.get('stim_width')?.disable();
       //this.stim_form.get('stim_interval')?.disable();
       //this.stim_form.get('stim_pulNum')?.disable();
@@ -455,7 +472,8 @@ export class DeviceStartupComponent {
       this.connectFlags[2] = false; // changes the Initial Training flag for buttons/sliders
 
       // changes the properties of select form fields
-      this.stim_form.get('tone_duration')?.enable();
+      this.stim_form.get('vibration_level')?.enable();
+      this.stim_form.get('vibration_length')?.enable();
       //this.stim_form.get('stim_fre')?.enable();
       //this.stim_form.get('stim_width')?.enable();
       //this.stim_form.get('stim_interval')?.enable();
@@ -466,9 +484,10 @@ export class DeviceStartupComponent {
         this.onSessTypeChange(this.sess_type1);
       }
       else {
-        this.stim_form.get('tone_duration')?.enable();
-        this.stim_form.get('sess_toneL')?.enable();
-        this.stim_form.get('sess_toneR')?.enable();
+        this.stim_form.get('vibration_level')?.enable();
+        this.stim_form.get('vibration_levelL')?.enable();
+        this.stim_form.get('vibration_levelR')?.enable();
+        this.stim_form.get('vibration_length')?.enable();
       }
     }
 
@@ -503,14 +522,14 @@ export class DeviceStartupComponent {
     */
 
     if (selValue == "Detection" && this.connectFlags[2] == false) {
-      this.stim_form.get('tone_duration')?.enable();
-      this.stim_form.get('tone_durationL')?.disable();
-      this.stim_form.get('tone_durationR')?.disable();
+      this.stim_form.get('vibration_level')?.enable();
+      this.stim_form.get('vibration_levelL')?.disable();
+      this.stim_form.get('vibration_levelR')?.disable();
     }
     if (selValue == "Discrimination" && this.connectFlags[2] == false) {
-      this.stim_form.get('tone_duration')?.disable();
-      this.stim_form.get('tone_durationL')?.enable();
-      this.stim_form.get('tone_durationR')?.enable();
+      this.stim_form.get('vibration_level')?.disable();
+      this.stim_form.get('vibration_levelL')?.enable();
+      this.stim_form.get('vibration_levelR')?.enable();
     }
   }
 
