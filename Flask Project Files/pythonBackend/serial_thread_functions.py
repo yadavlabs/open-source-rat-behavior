@@ -70,6 +70,7 @@ class ArduinoManager:
         self._handle_data = lambda line: None # default, function for handling received data from the arduino 
         self.session_params = {} # dictionary of session parameters
         self.stim_params = {} # dictionary of stimulation parameters
+        self.task_params = {} # dictionary for controlling stimulation parameter randomization
         self.current_trial_data = {} # dictionary of current trial data
         self.session_data = {} # dictionary of session data
         self.column_names = [] # list of column names for exporting session data
@@ -81,12 +82,17 @@ class ArduinoManager:
                 thread.join()
     
     # set properties specific to experiment, found in experiment_handlers.py
-    def initialize_experiment(self, session_params, stim_params, current_trial_data, session_data, column_names):
+    def initialize_experiment(self, session_params, stim_params, task_params, current_trial_data, session_data, column_names):
         self.session_params = session_params
         self.stim_params = stim_params
+        self.task_params = task_params
         self.current_trial_data = current_trial_data
         self.session_data = session_data
         self.column_names = column_names
+        if "task_array" in self.task_params: #might just remove this but trying to manage backwards compatibility. 
+            #I already have immediately made this not backwards compatible by isolating randomization params to a new dictionary
+            # but oh well
+            self.setup_task_randomization()
 
     # listener thread for reading incoming serial port data
     def _serial_listener(self):
@@ -187,6 +193,27 @@ class ArduinoManager:
                 #print("Stim" + param)
             #if val != self.session_params[param]:
             #    self.send_command(SET_PARAM_MAP[param](val))
+
+    def setup_task_randomization(self, seed=42):
+        random.seed(seed)
+        if not self.task_params["task_array_shuffled"]: # will do this on startup. Overwritten by loading experiment file
+            self.task_params["task_idx"] = 0
+            self.task_params["task_array_shuffled"] = random.sample(self.task_params["task_array"], len(self.task_params["task_array"]))
+            self.task_params["shuffle_idx"] = self.task_params["shuffle_idx"] + 1 # first shuffle
+
+        
+    def randomize_task_parameter(self):
+
+        if self.task_params["task_idx"] == len(self.task_params["task_array"]): # re-shuffled task_array
+            self.task_params["task_idx"] = 0
+            self.task_params["task_array_shuffled"] = random.sample(self.task_params["task_array"], len(self.task_params["task_array"]))
+            self.task_params["shuffle_idx"] = self.task_params["shuffle_idx"] + 1
+        
+        # format next value as dictionary and send for updates
+        # task_param_name specifies the target parameter for updating
+        next_param = {self.task_params["task_param_name"] : str(self.task_params["task_array_shuffled"][self.task_params["shuffle_idx"]])}
+        self.update_params(next_param)
+        self.task_params["task_idx"] = self.task_params["task_idx"] + 1 #incriment task_idx
 
 
     def get_queue(self):

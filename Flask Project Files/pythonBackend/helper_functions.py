@@ -8,6 +8,7 @@ import tkinter as tk
 from tkinter import filedialog
 from datetime import datetime
 import time
+import json
 
 def saveSessionDataUI(sessionData, y):
 
@@ -87,21 +88,68 @@ def saveSessionData(session_data, column_names):
     return "Session data saved: " + file_name
 
 
+def saveSessionTaskParams(task_params):
+    print("[Flask] Saving task parameters...")
+    file_name = get_save_path_via_dialog_window(file_type=[('JSON (*.json)','*.json')], title='Save Task Parameters')
+    if not file_name:
+        print("[Flask] File save cancelled.")
+        return "File save cancelled"
+    
+    print(file_name)
+    with open(file_name, 'w') as f:
+        json.dump(task_params, f, indent=4)
 
-def get_save_path_via_dialog_window(default_name=('Rat_' + datetime.now().strftime("%m-%d-%y")), default_path=r'C:/'):
+
+    return "Task parameters saved: " + file_name
+
+def loadSessionTaskParams():
+    print("[Flask] Loading task parameters...")
+    file_name = get_load_path_via_dialog_window()
+    if not file_name:
+        print("[Flask] File load cancelled.")
+        return None
+    
+    with open(file_name, 'r') as f:
+        task_params = json.load(f)
+
+    return task_params
+
+
+def get_save_path_via_dialog_window(default_name=('Rat_' + datetime.now().strftime("%m-%d-%y")), default_path=r'C:/', 
+                                    file_type=[('Excel (*.xlsx)','*.xlsx'), ('CSV (*.csv)', '*.csv')], 
+                                    title='Save Session Data'):
     root = tk.Tk()
     root.withdraw()
     root.attributes('-topmost', True)
     root.update()
     root.iconify()
 
-    file_type = [('Excel (*.xlsx)','*.xlsx'), ('CSV (*.csv)', '*.csv')]
+    #file_type = [('Excel (*.xlsx)','*.xlsx'), ('CSV (*.csv)', '*.csv')]
     file_name = filedialog.asksaveasfilename(
-        title='Save Session Data',
+        title=title,
         initialfile=default_name,
         initialdir=default_path,
         filetypes=file_type,
         defaultextension=file_type
+    ) #generate asksaveasfile window
+
+    root.destroy()
+
+    return file_name if file_name else None
+
+
+def get_load_path_via_dialog_window(default_path=r'C:/'):
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes('-topmost', True)
+    root.update()
+    root.iconify()
+    print('here')
+    file_type = [('JSON (*.json)','*.json')]#, ('CSV (*.csv)', '*.csv')]
+    file_name = filedialog.askopenfilename(
+        title='Load Experiment File',
+        initialdir=default_path,
+        filetypes=file_type,
     ) #generate asksaveasfile window
 
     root.destroy()

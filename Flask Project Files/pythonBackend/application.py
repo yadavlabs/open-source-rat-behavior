@@ -28,12 +28,13 @@ from queue import Queue, Empty
 # Other Python file imports
 import serial_functions as s #serial port communication functions for both arduino and stimulator
 #import helper_functions as h #additional helpers functions
-from helper_functions import saveSessionData
+from helper_functions import saveSessionData, saveSessionTaskParams, loadSessionTaskParams
 from serial_thread_functions import ArduinoManager, findPorts
 from experiment_handlers import (
     handle_data_vibration, 
     session_params_vibration, 
     stim_params_vibration, 
+	task_params_vibration,
     current_trial_data_vibration, 
     session_data_vibration,
 	column_names_vibration
@@ -119,7 +120,8 @@ ard_manager = ArduinoManager()
 ard_manager.assign_handler(handle_data_vibration)
 ard_manager.initialize_experiment(
 	session_params_vibration, 
-	stim_params_vibration, 
+	stim_params_vibration,
+	task_params_vibration,
 	current_trial_data_vibration, 
 	session_data_vibration,
 	column_names_vibration)
@@ -350,7 +352,21 @@ def ArduinoSetUpFunctions():
 
 	if (request.form["task"] == "paramsImpExp"):
 		# To implement
-		#print("HERE")
+		paramType = request.form["paramType"]
+		if paramType == "import":
+			ard_manager.serial_queue.put("Loading task parameters...")
+			task_params = loadSessionTaskParams()
+			if not task_params:
+				ard_manager.serial_queue.put("Load cancelled.")
+			else:
+				#ard_manager.task_params = task_params
+				print(task_params)
+
+		elif paramType == "export":
+			ard_manager.serial_queue.put("Saving task parameters...")
+			msg = saveSessionTaskParams(ard_manager.task_params)
+			ard_manager.serial_queue.put(msg)
+
 		print(request.form)
 		return {"task":request.form["task"], "message":"return", "output":[]}
 		

@@ -1,5 +1,5 @@
 import numpy as np
-import sounddevice as sd
+#import sounddevice as sd
 # experiment_handlers.py
 
 ''' This section corresponds to the Vibration detection/discrimination experiment '''
@@ -16,8 +16,17 @@ stim_params_vibration = {
 	"vibration_levelL": "150",
 	"vibration_levelR": "100",
     "vibration_length": "2000",
-    "randomize": "0"
+    "randomize": "0",
 }
+
+task_params_vibration = {
+    "task_param_name": "vibration_levelL", #name of stim parameter to be randomized
+    "task_array": list(range(70,250,15)), # stim parameters to be randomized
+    "task_array_shuffled": [], # randomized permutation of task_array
+    "task_idx": 0, # counter for indexing through task_array_shuffled 
+    "shuffle_idx": 0 # counter for tracking number of times task_array has been re-shuffled -> when task_idx == len(task_array)
+}
+
 current_trial_data_vibration = {
         "sess_time":"-",
         "trial_n":"-",
@@ -74,6 +83,7 @@ def handle_data_vibration(self, line):
         self.serial_queue.put("Arduino " + data[0])
         self.serial_queue.put("Manual Control Enabled")
         self.serial_connected_event.set()
+        
 
     elif data[0] == "Start":
         print("[Arduino] Beginning Session")
@@ -123,6 +133,8 @@ def handle_data_vibration(self, line):
         else: #left trial, stimulation if CV experiment is selected
                 
             if self.session_params["session_type"] != "Initial Training": #self.stim_params["stim_enable"] == 1:
+                if self.stim_params["randomize"] == 1:
+                    self.randomize_task_parameter()
                 #if stimParams["randomize"] == 1:
                 #        randomizeAmplitude(gib, stimParams, y)
                 #print("HERE")
@@ -171,7 +183,7 @@ def handle_data_vibration(self, line):
             if self.session_params["session_type"] == "Initial Training" or self.session_params["experiment_type"] == "Detection":
                 self.serial_queue.put("No stim")
             else:
-                print(float(self.stim_params["vibration_levelR"])/1000)
+                print(float(self.stim_params["vibration_levelR"]))
                 #play_pure_tone(frequency=11300, duration=float(self.stim_params["tone_durationR"])/1000, amplitude=0.5)
                 self.serial_queue.put("Right port stim")
                 
@@ -298,5 +310,5 @@ def play_pure_tone(frequency, duration, sample_rate=44100, amplitude=0.5):
     """
     t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
     tone = amplitude * np.sin(2 * np.pi * frequency * t)  # Generate sine wave
-    sd.play(tone, samplerate=sample_rate)
-    sd.wait()  # Wait until sound has finished playing
+    #sd.play(tone, samplerate=sample_rate)
+    #sd.wait()  # Wait until sound has finished playing
