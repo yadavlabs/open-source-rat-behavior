@@ -29,7 +29,7 @@ from queue import Queue, Empty
 import serial_functions as s #serial port communication functions for both arduino and stimulator
 #import helper_functions as h #additional helpers functions
 from helper_functions import saveSessionData, saveSessionTaskParams, loadSessionTaskParams
-from serial_thread_functions import ArduinoManager, findPorts
+from serial_thread_functions_proxy import ArduinoManager, findPorts
 from experiment_handlers import (
     handle_data_vibration, 
     session_params_vibration, 
@@ -158,18 +158,19 @@ def ArduinoSetUpFunctions():
 			includes the specified task, which only originates from the
 			"Find Ports" button on the UI.
 	"""
+	print(request.form["device"])
 	if (request.form["task"] == "findPorts"):
 		ports = findPorts() # Gathers the list of connected ports and COM ports
 		ardPorts = [] # Empty list of Arduino ports
 		gibPorts = [] # Empty list of Gibson ports
 		#print(sessionData)
 		for port in ports:
-			
+			print(port)
 			if (request.form["device"] == "Arduino"): # Checks for Arduino device
 				if ("Arduino" in str(port)): # Checks if Arduino is in the name of the port
 					temp1 = str(port).split(" ")
 					ardPorts.append({"value":str(port),"viewValue":temp1[0]}) # Adds it to the list of Arduino ports
-			
+				
 			if (request.form["device"] == "Gibson"): # Checks for Gibson device
 				if ("Stellaris" in str(port)): # Checks if the Gibson is the name of the port
 					temp2 = str(port).split(" ")

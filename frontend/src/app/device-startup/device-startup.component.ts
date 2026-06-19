@@ -216,7 +216,7 @@ export class DeviceStartupComponent {
     */
 
     this.flaskService.refreshPortList("Arduino").subscribe(data => { this.ardPorts = data.output["Arduino"] }); // returns the Arduino port list
-    this.flaskService.refreshPortList("Gibson").subscribe(data => { this.gibPorts = data.output["Gibson"] }); // returns the Gibson port list
+    //this.flaskService.refreshPortList("Gibson").subscribe(data => { this.gibPorts = data.output["Gibson"] }); // returns the Gibson port list
   }
 
 
