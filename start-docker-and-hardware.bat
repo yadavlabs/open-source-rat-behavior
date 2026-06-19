@@ -1,5 +1,10 @@
 @echo off
-REM setlocal
+if "%~1"=="-FIXED_CTRL_C" (
+    shift
+) else (
+    call <NUL %0 -FIXED_CTRL_C %*
+    goto :EOF
+)
 SETLOCAL EnableDelayedExpansion
 
 echo ====================================================
@@ -41,24 +46,35 @@ call conda install -y --file requirements-host.txt || call pip install --quiet -
 REM 1.4 Start the host hardware interface
 echo [3/3] Spawning Hardware Proxy Server...
 :: 'start' runs the proxy inside its own conda-activated command prompt window
-start "SerialPortProxy" cmd /k "call %CONDA_BAT% activate behavior-chamber-host && python host_serial_proxy.py"
+set "terinalTitle=SerialPortProxy"
+set "commandToRun=call "%CONDA_BAT%" activate behavior-chamber-host && python host_serial_proxy.py"
+
+
+REM start "SerialPortProxy" cmd /k "call %CONDA_BAT% activate behavior-chamber-host && python host_serial_proxy.py"
+for /f %%A in ('powershell -Command "(Start-Process cmd -ArgumentList '/k %commandToRun%' -WindowStyle Normal -PassThru).Id"') do set "PROXY_PID=%%A"
+title %terminalTitle%
+
+echo Started terminal with PID: %PROXY_PID%
 
 REM 2 Launch the Docker container
 echo ----------------------------------------------------
 echo  Booting Docker Web Containers (Angular + Flask)
 echo  Press Ctrl+C in this window to stop the servers.
 echo ----------------------------------------------------
-cmd /c "docker compose down && docker compose up"
-REM call docker compose down
-REM call docker compose up
+REM cmd /c "docker compose down && docker compose up"
+call docker compose down
+call docker compose up
+REM start /wait cmd /c "docker compose down && docker compose up"
 
 
 
 echo ----------------------------------------------------
 echo  Stopping background hardware servers...
 echo ----------------------------------------------------
-taskkill /FI "WINDOWTITLE eq SerialPortProxy*" /T /F >nul 2>&1
-
+REM taskkill /FI "WINDOWTITLE eq SerialPortProxy*" /T /F >nul 2>&1
+if defined PROXY_PID (
+    taskkill /PID %PROXY_PID% /T /F 
+)
 echo  All local server systems offline.
 echo ----------------------------------------------------
 pause

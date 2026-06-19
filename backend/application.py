@@ -16,7 +16,7 @@
 """
 
 # Native Python imports
-from flask import Flask, request, Response, jsonify
+from flask import Flask, request, Response, jsonify, send_file
 import flask
 from flask_cors import CORS
 import serial
@@ -28,7 +28,7 @@ from queue import Queue, Empty
 # Other Python file imports
 import serial_functions as s #serial port communication functions for both arduino and stimulator
 #import helper_functions as h #additional helpers functions
-from helper_functions import saveSessionData, saveSessionTaskParams, loadSessionTaskParams
+from helper_functions import saveSessionDataD, saveSessionTaskParams, loadSessionTaskParams
 from serial_thread_functions_proxy import ArduinoManager, findPorts
 from experiment_handlers import (
     handle_data_vibration, 
@@ -128,7 +128,7 @@ ard_manager.initialize_experiment(
 
 #gib = serial.Serial() # A serial port object responsible for communication with the Gibson
 app = Flask(__name__) # This creates the application as a Flask object
-CORS(app) # Implements CORS protocol to the application
+CORS(app, expose_headers=["Content-Disposition"]) # Implements CORS protocol to the application
 
 """
 View Function 1:
@@ -158,11 +158,12 @@ def ArduinoSetUpFunctions():
 			includes the specified task, which only originates from the
 			"Find Ports" button on the UI.
 	"""
-	print(request.form["device"])
+
 	if (request.form["task"] == "findPorts"):
 		ports = findPorts() # Gathers the list of connected ports and COM ports
 		ardPorts = [] # Empty list of Arduino ports
 		gibPorts = [] # Empty list of Gibson ports
+
 		#print(sessionData)
 		for port in ports:
 			print(port)
@@ -439,10 +440,38 @@ def WriteToCOMport():
 			#print(sessionData)
 			#h.saveSessionDataUI(sessionData, y) #saves session data
 			ard_manager.serial_queue.put("Saving session data...")
-			msg = saveSessionData(ard_manager.session_data, ard_manager.column_names)
-			ard_manager.serial_queue.put(msg)
+			#msg = saveSessionData(ard_manager.session_data, ard_manager.column_names)
+			file_stream, mimetype, filename = saveSessionDataD(ard_manager.session_data, ard_manager.column_names)
+			#ard_manager.serial_queue.put(msg)
+			return send_file(
+            file_stream,
+            mimetype=mimetype,
+            as_attachment=True,
+            download_name=filename
+        	)
 
 	return {"task":request.form["task"],"message":"success"}
+
+@app.route("/saveSessionDataRoute", methods=["POST"])
+def save_session_data_endpoint():
+    try:
+        # Accept variable parameter payloads from Angular click handlers (e.g. {"format": "xlsx"})
+        request_payload = request.json or {}
+        selected_format = request_payload.get("format", "xlsx")
+        
+        # Invoke your updated helper function directly using your existing session arrays
+        file_stream, mimetype, filename = saveSessionDataD(ard_manager.session_data, ard_manager.column_names)
+        
+        # Package and dispatch the file attachment payload instantly across the HTTP bridge
+        return send_file(
+            file_stream,
+            mimetype=mimetype,
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        print(f"[Flask Server Error] Save session action failed: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 		
 	
 

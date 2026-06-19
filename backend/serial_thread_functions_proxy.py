@@ -112,6 +112,7 @@ class ArduinoManager:
     # listener thread for reading incoming serial port data
     def _serial_listener(self):
         print("[THREAD] Serial listener started.")
+        buffer = ""
         while not self.serial_stop_event.is_set():
             try:
                 if self.socket_connection:#self.ard.is_open and self.ard.in_waiting:
@@ -142,7 +143,7 @@ class ArduinoManager:
         try:
             # Clean string name if extracted containing our proxy string tag
             clean_com_port = port.split(" ")[0].strip()
-            
+            print(clean_com_port)
             # 1. Instruct proxy to start bridging the COM port
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect((self.host_ip, 8888))

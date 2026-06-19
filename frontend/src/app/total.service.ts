@@ -1,6 +1,7 @@
 // Importing modules
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
 
 // Importing services
 import { SSEService } from './device-startup/sse.service';
@@ -14,6 +15,7 @@ import { postDic } from './postDic';
 })
 
 export class FlaskService {
+  private baseUrl = 'http://localhost:5000'; // Match your Docker Flask port
   constructor(private http: HttpClient, private sseService: SSEService) { }
 
   URL1 = "http://127.0.0.1:5000/device_setup"; // URL to RESTful API for setup
@@ -181,6 +183,14 @@ export class FlaskService {
     body = body.set("butState", state); // ...
 
     return this.http.post<postDic>(this.URL2, body); // returns a status message
+  }
+
+  downloadSessionFile(formatType: 'xlsx' | 'csv'): Observable<Blob> {
+    // Send a POST request to your new Flask endpoint, explicitly requesting a raw file blob response
+    return this.http.post(`${this.baseUrl}/saveSessionDataRoute`, 
+      { format: formatType }, 
+      { responseType: 'blob' }
+    );
   }
 
 }

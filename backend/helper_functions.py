@@ -9,6 +9,7 @@ from tkinter import filedialog
 from datetime import datetime
 import time
 import json
+import io
 
 def saveSessionDataUI(sessionData, y):
 
@@ -87,6 +88,38 @@ def saveSessionData(session_data, column_names):
 
     return "Session data saved: " + file_name
 
+def saveSessionDataD(session_data, column_names, file_format="xlsx"):
+    """
+    Refactored saveSessionData: Bypasses Tkinter completely.
+    Converts session_data matrices into an in-memory binary tracking buffer
+    to stream down the web pipeline directly into the user's browser.
+    """
+    print("[Docker Helper] Flask is structuring an in-memory session export stream...")
+    
+    # 1. Map your row arrays directly to a pandas DataFrame and apply your structural headers
+    df = pd.DataFrame(session_data)
+    df.columns = column_names
+    
+    # 2. Allocate an isolated memory byte block to capture file data
+    file_stream = io.BytesIO()
+    
+    # 3. Compile the file structure into memory depending on the format requested
+    if file_format == "xlsx":
+        with pd.ExcelWriter(file_stream, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False)
+        mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        filename = "experiment_behavior_log.xlsx"
+        
+    else:  # Fallback seamlessly to standard CSV format 
+        text_stream = io.StringIO()
+        df.to_csv(text_stream, index=False)
+        file_stream.write(text_stream.getvalue().encode('utf-8'))
+        mimetype = "text/csv"
+        filename = 'Rat_' + datetime.now().strftime("%m-%d-%y")
+        
+    # 4. Rewind the stream memory pointer back to index zero so Flask reads from the beginning
+    file_stream.seek(0)
+    return file_stream, mimetype, filename
 
 def saveSessionTaskParams(task_params):
     print("[Flask] Saving task parameters...")

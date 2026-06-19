@@ -28,9 +28,47 @@ export class RunTrialComponent {
   @Input() childTrialTable: any;
   man_flag: boolean = false; // flag to determine whether the manual control buttons/toggle sliders are enabled/disabled
 
+  // Tracking flag to prevent double clicks during file translation
+  isExporting: boolean = false;
+  
   // Tooltips for select buttons and form fields
   ExpDataToolTip = "Exports the entire session's trial data to an external file.";
 
+  handleDataExport(chosenFormat: 'xlsx' | 'csv' = 'xlsx') {
+    if (this.isExporting) return;
+    this.isExporting = true;
+
+    console.log("[Angular] Requesting behavior spreadsheet generation via Docker bridge...");
+
+    this.flaskService.downloadSessionFile(chosenFormat).subscribe({
+      next: (incomingFileBlob: Blob) => {
+        // 1. Build a local memory object URL out of the binary network data array
+        const localDownloadUrl = window.URL.createObjectURL(incomingFileBlob);
+        
+        // 2. Build a temporary link hidden inside the DOM
+        const hiddenAnchor = document.createElement('a');
+        hiddenAnchor.href = localDownloadUrl;
+        
+        // Match the extension accurately for the browser file manager allocation window
+        hiddenAnchor.download = `rat_behavior_session.${chosenFormat}`;
+        
+        // 3. Fire a programmatic mouse click event to trigger the native browser download prompt box
+        document.body.appendChild(hiddenAnchor);
+        hiddenAnchor.click();
+        
+        // 4. Delete tracking pointers instantly to guarantee no memory leak tracks survive
+        document.body.removeChild(hiddenAnchor);
+        window.URL.revokeObjectURL(localDownloadUrl);
+        
+        console.log("[Angular] Export successfully handled by the browser engine.");
+        this.isExporting = false;
+      },
+      error: (err) => {
+        console.error("Export pipeline encountered a transmission fault:", err);
+        this.isExporting = false;
+      }
+    });
+  }
 
   SessionButtonsPressed(butString: string, device: string) {
     /*

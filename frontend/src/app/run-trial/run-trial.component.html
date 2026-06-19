@@ -86,9 +86,11 @@
 
       <!-- (2/2) EXPORT DATA: Allows the user to export the data as an Excel file. -->
       <button mat-raised-button
-        (click)="SessionButtonsPressed('export','N/A')"
+        (click)="handleDataExport('xlsx')"
+        [disabled]="isExporting"
         class="export-but"
         matTooltip={{ExpDataToolTip}}>
+        {{ isExporting ? 'Exporting...' : 'Export Data' }}
           Export Data
       </button>
       
