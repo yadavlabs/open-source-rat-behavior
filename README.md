@@ -1,6 +1,9 @@
 # open-source-rat-behavior
 Open source software for controlling operant conditioning chambers, running behavioral experiments, and collecting data. 
 
+
+# IMPORTANT: This branch is a work in progress which now uses Docker for building and deploying the app. This README has not yet been updated to reflect these changes.
+
 ## Prerequisites
 For specific version see `docs\Software Versions.xlsx`
 - `Python` If using standalone [Python version](https://www.python.org/downloads/release/python-3810/), during installation check "Add python.exe to PATH"

@@ -16,6 +16,7 @@
 """
 
 # Native Python imports
+import ripple_thread_functions
 from flask import Flask, request, Response, jsonify, send_file
 import flask
 from flask_cors import CORS
@@ -137,6 +138,7 @@ View Function 1:
 """
 @app.route("/")
 def welcomeScreen():
+	ripple_thread_functions.connectToProcessor()
 	return "Welcome"
 	
 """

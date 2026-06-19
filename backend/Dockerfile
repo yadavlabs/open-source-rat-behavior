@@ -24,6 +24,9 @@ RUN pip3 install --no-cache-dir -r requirements.txt --no-deps
 #    pip install --no-cache-dir -r requirements.txt --no-dependencies || \
 #    pip install --no-cache-dir -r requirements.txt
 
+COPY xipppy-*.whl .
+RUN pip3 install --no-cache-dir xipppy-*.whl
+
 COPY . .
 
 EXPOSE 5000
