@@ -58,7 +58,8 @@ def start_serial_bridge(com_port, baudrate):
                 while True:
                     try:
                         if ser.is_open and ser.in_waiting > 0:
-                            conn.sendall(ser.read(ser.in_waiting))
+                            conn.sendall(ser.read_until(expected=b'\r\n'))
+                            #conn.sendall(ser.read(ser.in_waiting))
                     except: break
             
             # Subthread: Docker Network commands down to Serial

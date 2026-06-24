@@ -47,8 +47,13 @@ REM 1.4 Start the host hardware interface
 echo [3/3] Spawning Hardware Proxy Server...
 :: 'start' runs the proxy inside its own conda-activated command prompt window
 set "terinalTitle=SerialPortProxy"
+pause
 set "commandToRun=call "%CONDA_BAT%" activate behavior-chamber-host && python host_serial_proxy.py"
-
+if errorlevel 1 (
+    echo [3/3] Failed to start Hardware Proxy Server.
+    pause
+    exit /b
+)
 
 REM start "SerialPortProxy" cmd /k "call %CONDA_BAT% activate behavior-chamber-host && python host_serial_proxy.py"
 for /f %%A in ('powershell -Command "(Start-Process cmd -ArgumentList '/k %commandToRun%' -WindowStyle Normal -PassThru).Id"') do set "PROXY_PID=%%A"

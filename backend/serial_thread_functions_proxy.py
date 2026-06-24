@@ -123,6 +123,7 @@ class ArduinoManager:
                             line, buffer = buffer.split("\n", 1)
                             line = line.strip()
                             if line:
+                                print(f"Received data: {line}")
                                 self._handle_data(line)
                     #line = self.ard.read_until(expected=b'\r\n').decode("utf").rstrip() #readline().decode('utf-8').strip()
                     #print(line)

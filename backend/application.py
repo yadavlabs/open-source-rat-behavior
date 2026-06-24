@@ -31,6 +31,8 @@ import serial_functions as s #serial port communication functions for both ardui
 #import helper_functions as h #additional helpers functions
 from helper_functions import saveSessionDataD, saveSessionTaskParams, loadSessionTaskParams
 from serial_thread_functions_proxy import ArduinoManager, findPorts
+from ripple_thread_functions import XipppyStimulator
+
 from experiment_handlers import (
     handle_data_vibration, 
     session_params_vibration, 
@@ -127,6 +129,8 @@ ard_manager.initialize_experiment(
 	session_data_vibration,
 	column_names_vibration)
 
+stim_manager = XipppyStimulator()
+
 #gib = serial.Serial() # A serial port object responsible for communication with the Gibson
 app = Flask(__name__) # This creates the application as a Flask object
 CORS(app, expose_headers=["Content-Disposition"]) # Implements CORS protocol to the application
@@ -138,7 +142,7 @@ View Function 1:
 """
 @app.route("/")
 def welcomeScreen():
-	ripple_thread_functions.connectToProcessor()
+	#ripple_thread_functions.connectToProcessor()
 	return "Welcome"
 	
 """
@@ -218,17 +222,17 @@ def ArduinoSetUpFunctions():
 						"output":request.form["device"]
 					}, 408
             # This code is completed if the "Connect Gibson" button was pressed
-			'''
-			elif (request.form["device"] == "Gibson"): # Checks that it's the Gibson
-				
-				gib.baudrate = int(request.form["baudRate"]) # Extracts the baud rate from sent params
-				gib.port = request.form["port"] # Extracts the COM port from sent params
-				gib.timeout = 2
-				gib.open() # Opens the serial port object
+
+			elif (request.form["device"] == "Ripple"): # Checks that it's the Gibson
+				stim_manager.initialize()
+				#gib.baudrate = int(request.form["baudRate"]) # Extracts the baud rate from sent params
+				#gib.port = request.form["port"] # Extracts the COM port from sent params
+				#gib.timeout = 2
+				#gib.open() # Opens the serial port object
                                 
 				print(request.form["device"] + " is open!") # Partial indicator to the user that the device was opened
 				return {"task":request.form["task"],"message":"success","output":request.form["device"]} # Returns the status message
-			'''			
+		
 		except:
 			# This code is completed if the "try" statement cannot execute
 			print("Failed") # Partial indicator to the user that the device was not opened

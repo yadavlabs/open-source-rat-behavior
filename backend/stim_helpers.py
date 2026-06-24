@@ -5,26 +5,40 @@ import xipppy as xp
 def defaultChannelMap():
     array_chans = list(range(1,17)) # labelling convention of electrode array being used 
     ripple_chans = [1, 6, 9, 15, 2, 5, 10, 16, 3, 7, 12, 13, 4, 8, 11, 14] # ripple channels that map to electrodes on the array (based on connection/wiring/routing)
+    # xipppy returns ripple channels in 0-indexed format even though Trellis displays channels in 1-indexed format
+    # so need to subtract 1 to convert to 0-indexed format.
+    # further, all xipppy functions that take electrodes as input use 0-indexed format.
+    # Even further, to if multiple elecrodes are specified in one xipppy function call,
+    # the variable that holds the list of electrodes must be an array.array('I', [elecs])
+    # (this is handled in the XipppyStimulator class in ripple_thread_functions.py): 
+    # Maybe there are other things that would work but numpy array doesn't and the only thing I've found to work is array.array('I', [])
+    # Just kidding. I thought array.array('I', []) worked but it does not.
+    # 
+    ripple_chans = [chan - 1 for chan in ripple_chans]
     return(dict(zip(array_chans, ripple_chans)))
 
 
-def quantizeAmplitude(amplitude, Nc, Na, s):
+def quantizeAmplitude(amplitude, Nc, Na, step, max_amp):
     """
     Translates quantizeAmplitude.m feature-for-feature.
     Ensures absolute charge balancing across multipolar combinations.
     """
+    
+    # clamp amplitude to the maximum allowed value
+    ampl = min(amplitude, max_amp)
+    
     # q = number of cathodes * number of anodes * step size (uA)
-    q = Nc * Na * s
+    q = Nc * Na * step
     
     # Round off to guarantee configuration factors align with hardware steps
-    m = int(round(amplitude / q))
+    m = int(round(ampl / q))
     I_valid = m * q  # Corrected total valid current
     
     kc = m * Na  # Quantized steps for cathodes
     ka = m * Nc  # Quantized steps for anodes
     
-    Ic = kc * s  # Total cathode current payload (uA)
-    Ia = ka * s  # Total anode current payload (uA)
+    Ic = kc * step  # Total cathode current payload (uA)
+    Ia = ka * step  # Total anode current payload (uA)
     
     return kc, ka, I_valid, Ic, Ia
 
@@ -92,21 +106,21 @@ def buildBiphasicSequence(pw, amp, leading_pol, fast_settle):
     native xipppy StimSegment objects matching clock-cycle rules.
     """
     # Leading Phase Segment: Polarity maps -1 for Cathodic leading, 1 for Anodic leading
-    pol1 = -1 if leading_pol == 0 else 1
-    seg1 = xp.StimSegment(length=int(pw), ampl=int(amp), pol=pol1, fast_settle=False, current_enable=True)
+    pol1 = -1 if leading_pol == -1 else 1
+    seg1 = xp.StimSegment(int(pw), int(amp), pol1, fast_settle=False, enable=True)
     
     # Inter-Pulse Interval (IPI): Forced to 2 clock-cycles (66.66 microseconds)
-    seg2 = xp.StimSegment(length=2, ampl=0, pol=0, fast_settle=False, current_enable=False)
+    seg2 = xp.StimSegment(2, 0, -1, fast_settle=False, enable=False)
     
     # Trailing Phase Segment: Inverse polarity to balance total charge delivery
-    pol3 = 1 if leading_pol == 0 else -1
-    seg3 = xp.StimSegment(length=int(pw), ampl=int(amp), pol=pol3, fast_settle=False, current_enable=True)
+    pol3 = 1 if leading_pol == -1 else -1
+    seg3 = xp.StimSegment(int(pw), int(amp), pol3, fast_settle=False, enable=True)
     
     segments = [seg1, seg2, seg3]
     
     # Append passive fast discharge dump line if flag toggle is engaged
     if fast_settle:
-        seg4 = xp.StimSegment(length=6, ampl=0, pol=pol3, fast_settle=True, current_enable=True)
+        seg4 = xp.StimSegment(6, 0, pol3, fast_settle=True, enable=True)
         segments.append(seg4)
         
     return segments
@@ -118,11 +132,11 @@ def inactive_cathode_sequence(pw):
     """
     total_len = int(2 * pw + 2)
     # Generate an un-energized placeholder pass block
-    seg = xp.StimSegment(length=total_len, ampl=0, pol=0, fast_settle=False, current_enable=False)
+    seg = xp.StimSegment(total_len, 0, -1, fast_settle=False, enable=False)
     return [seg]
 
 
-def generateStimulationCommand(params, fast_settle=False, trig_chan=None):
+def generateStimulationCommand(params, max_amp, fast_settle=False, trig_chan=None):
     """
     Translates generateStimulationCommand.m into Python.
     Iterates across the behavioral schedule arrays to compile structural command sequences.
@@ -152,7 +166,7 @@ def generateStimulationCommand(params, fast_settle=False, trig_chan=None):
         aNa = len(active_anodes)
         
         # Calculate balanced step variables for current loop
-        kc, ka, amp_valid, amp_c, amp_a = quantizeAmplitude(params["amplitude"], aNc, aNa, params["step"])
+        kc, ka, amp_valid, amp_c, amp_a = quantizeAmplitude(params["amplitude"], aNc, aNa, params["step"], max_amp)
         
         repeats = schedule[i]["repeats"]
         action = schedule[i]["action"]
@@ -162,20 +176,21 @@ def generateStimulationCommand(params, fast_settle=False, trig_chan=None):
         
         # 1. Compile Cathodic Electrodes Sequences
         for n in range(aNc):
-            seq_list = buildBiphasicSequence(durCC, kc, leading_pol=0, fast_settle=fast_settle)
-            stim_seq = xp.StimSeq(elec=active_cathodes[n], period=period, repeats=repeats, seq=seq_list, action=action)
+            seq_list = buildBiphasicSequence(durCC, kc, leading_pol=-1, fast_settle=fast_settle)
+            # use * to unpack list of segments to pass as individual arguments to StimSeq
+            stim_seq = xp.StimSeq(active_cathodes[n], period, repeats, *seq_list, action=action)
             step_sequences.append(stim_seq)
             
         # 2. Compile Anodic Electrodes Sequences
         for n in range(aNa):
             seq_list = buildBiphasicSequence(durCC, ka, leading_pol=1, fast_settle=fast_settle)
-            stim_seq = xp.StimSeq(elec=active_anodes[n], period=period, repeats=repeats, seq=seq_list, action=action)
+            stim_seq = xp.StimSeq(active_anodes[n], period, repeats, *seq_list, action=action)
             step_sequences.append(stim_seq)
             
         # 3. Handle Auxiliary Input Trigger Channel Lines if defined
         if trig_adj:
             seq_list = inactive_cathode_sequence(durCC)
-            stim_seq = xp.StimSeq(elec=trig_chan, period=period, repeats=repeats, seq=seq_list, action=action)
+            stim_seq = xp.StimSeq(trig_chan, period, repeats, *seq_list, action=action)
             step_sequences.append(stim_seq)
             
         cmd_out.append(step_sequences)

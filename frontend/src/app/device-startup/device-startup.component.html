@@ -96,26 +96,24 @@
       <div class="row">
         <!-- These buttons are closely related, so they are contained in the same row. -->
 
-        <div *ngIf="isStimulatorVisible", class="col-md-6">
-          <!-- (5a/7) CONNECT GIBSON BUTTON: Allows the user to connect to the Gibson serial port. -->
+        <div class="col-md-6">
+          <!-- (5a/7) CONNECT Ripple BUTTON: Allows the user to connect to the Ripple TCP. -->
           <button mat-raised-button
-            (click)="ConnectDeviceButtonPress(gibBaudRate, gibSelectedPort, 'Gibson', 1)"
+            (click)="ConnectDeviceButtonPress(gibBaudRate, gibSelectedPort, 'Ripple', 1)"
             class="cus-button"
             [disabled]="(connectFlags[1] || connectFlags[2])">
-              Connect Gibson
+              Connect Ripple
           </button>
         </div>
         
 
-        <div 
-        *ngIf="isStimulatorVisible"
-         class="col-md-6">
-          <!-- (5b/7) DISCONNET GIBSON BUTTON: Allows the user to disconnect the Gibson serial port. -->
+        <div class="col-md-6">
+          <!-- (5b/7) DISCONNET Ripple BUTTON: Allows the user to disconnect the Ripple TCP. -->
           <button mat-raised-button
-            (click)="DisconnectDeviceButtonPressed('Gibson', 1)"
+            (click)="DisconnectDeviceButtonPressed('Ripple', 1)"
             class="cus-button"
             [disabled]="!connectFlags[1]">
-              Disconnect Gibson
+              Disconnect Ripple
           </button>
         </div>
       </div>

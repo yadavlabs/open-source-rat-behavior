@@ -1,5 +1,6 @@
 import time
 import threading
+import array
 import xipppy as xp
 from stim_helpers import generateStimulationCommand, quantizeAmplitude, defaultChannelMap
 
@@ -24,7 +25,7 @@ def testConnection():
     
     time.sleep(0.001)
 
-class XippmexStimulator:
+class XipppyStimulator:
     def __init__(self, channel_map=defaultChannelMap(), front_end_type="Pico"):
         self.is_initialized = False
         self.mode = "TCP"
@@ -62,6 +63,7 @@ class XippmexStimulator:
 
         self.amp_res_val = None
         self.amp_res = None
+        self.max_amp = None
         self.stimulation_command = None
         self.clear_cmd = []
         
@@ -76,16 +78,18 @@ class XippmexStimulator:
         """Replicates your displayStatusMessage callback method style."""
         self.status_message = msg
         timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-        print(f"[XippmexStimulator {timestamp}] {msg}")
+        print(f"[XipppyStimulator {timestamp}] {msg}")
 
     # ====================================================
     # NATIVE PYTHON CONTEXT MANAGER HOOKS
     # ====================================================
+    '''
     def __enter__(self):
-        """Allows usage like: 'with XippmexStimulator() as stimulator:'"""
+        """Allows usage like: 'with XipppyStimulator() as stimulator:'"""
+        self.log_status("Top of __enter__.")
         self.initialize()
         return self
-
+    '''
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Safely tears down hardware when exiting a code block or crashing."""
         if exc_type is not None:
@@ -93,6 +97,7 @@ class XippmexStimulator:
         self.cleanup()
 
     def initialize(self, mode="TCP", address="192.168.42.129"):
+        self.log_status("Top of initialize.")
         if self.is_initialized:
             self.log_status("Stimulator already initialized.")
             return True
@@ -103,11 +108,13 @@ class XippmexStimulator:
         try:
             # Leverage the documentation's context manager safely
             # We instantiate and enter it programmatically to keep the channel open
-            self._ctx = xp.xipppy_open(use_tcp=(self.mode == "TCP"))
-            self._ctx.__enter__()
-            self.log_status("Xipppy context manager session active.")
+            print("At xipppy_open")
+            tcpMode = xp._open(use_tcp=(self.mode == "TCP"))
+            #self._ctx = xp.xipppy_open(use_tcp=(self.mode == "TCP"))
+            #self._ctx.__enter__()
+            self.log_status("Xipppy TCP session active.")
         except Exception as e:
-            self.log_status(f"Xippmex Context Manager did not initialize: {e}")
+            self.log_status(f"Xipppy Context Manager did not initialize: {e}")
             return False
 
         # Query available stimulation electrodes from connected front-ends
@@ -115,14 +122,16 @@ class XippmexStimulator:
         if len(stim_chans) == 0:
             self.log_status("Warning: No stimulation hardware detected on the bus network.")
             return False
-            
+        
+        # See comment in defaultChannelMap() in stim_helpers.py but to call xipppy functions with multiplitple electrodes,
+        # the variable that holds the list of electrodes must be an array.array('I', [elecs])
         self.stimulation_channels = list(stim_chans)
         
         # Map channels if an active lead dictionary is present
         if self.apply_map:
-            self.selected_channels = [c for c in self.stimulation_channels if c in self.channel_map.values()]
+            self.selected_channels = array.array('I', [c for c in self.stimulation_channels if c in self.channel_map.values()])
         else:
-            self.selected_channels = self.stimulation_channels
+            self.selected_channels = array.array('I', self.stimulation_channels)
 
         self.is_initialized = True
         self.log_status("Stimulator initialized successfully.")
@@ -131,6 +140,8 @@ class XippmexStimulator:
         self.generate_clear_cmd()
         self.enable_recording()
         self.update_amplitude_resolution(self.stimulation_parameters["step"])
+        self.update_parameters(parameters=self.stimulation_parameters)
+
         return True
 
     def is_connected(self):
@@ -138,46 +149,57 @@ class XippmexStimulator:
 
     def update_parameters(self, parameters):
         if not self.is_initialized:
-            self.log_status("Xippmex not initialized.")
+            self.log_status("Xipppy not initialized.")
             return
 
         for field, new_param in parameters.items():
             if field in ["anode", "cathode"] and self.apply_map:
                 self.stimulation_parameters[field] = self.channel_map.get(new_param, new_param)
+            elif field == "step":
+                self.update_amplitude_resolution(new_param)
             else:
                 self.stimulation_parameters[field] = new_param
-
-        # Run quantization on amplitude
-        idx = self.amp_res_val_list.index(self.stimulation_parameters["step"])
-        max_allowed_steps = self.max_steps_list[idx]
         
-        if self.stimulation_parameters["amplitude"] > max_allowed_steps:
-            self.stimulation_parameters["amplitude"] = max_allowed_steps
-            self.log_status(f"Amplitude corrected to hardware safety limits: {max_allowed_steps} steps")
+        self.stimulation_command, amp_info = generateStimulationCommand(
+            params=self.stimulation_parameters,
+            max_amp=self.max_amp,
+            fast_settle=self.fast_settle,
+            trig_chan=self.trig_channel
+        )
+        if not amp_info["validInput"]:
+            self.stimulation_parameters["amplitude"] = amp_info["ampValid"]
+            self.log_status(f"Amplitude corrected to: {amp_info['ampValid']} uA")
 
-        # Distribute anodic vs cathodic parameters safely
         if not self.stimulation_parameters["sequential"]:
-            self.stimulation_parameters["amplitude_cathode"] = self.stimulation_parameters["amplitude"]
-            self.stimulation_parameters["amplitude_anode"] = self.stimulation_parameters["amplitude"]
+            self.stimulation_parameters["amplitude_cathode"] = amp_info["ampCathode"]
+            self.log_status(f"Cathode amplitude set to {amp_info['ampCathode']} uA")
+
+            self.stimulation_parameters["amplitude_anode"] = amp_info["ampAnode"]
+            self.log_status(f"Anode amplitude set to {amp_info['ampAnode']} uA")
         else:
-            self.stimulation_parameters["amplitude_cathode"] = self.stimulation_parameters["amplitude"]
-            self.stimulation_parameters["amplitude_anode"] = self.stimulation_parameters["amplitude"]
+            self.stimulation_parameters["amplitude_cathode"] = amp_info["ampValid"]
+            self.stimulation_parameters["amplitude_anode"] = amp_info["ampValid"]
+        
 
         self.log_status("Parameters updated.")
 
     def deliver_stimulus(self):
         if not self.is_initialized:
-            self.log_status("Xippmex not initialized.")
+            self.log_status("Xipppy not initialized.")
             return
 
         self.log_status("Delivering stimulation train...")
         
         # Because the context manager is reentrant, wrapping specific critical sections 
         # inside an explicit 'with' block is highly reliable and prevents side-channel drift
-        with xp.xipppy_open(use_tcp=(self.mode == "TCP")):
-            xp.stim_enable_set(True)
-            
+        #with xp.xipppy_open(use_tcp=(self.mode == "TCP")):
+        xp.stim_enable_set(True)
+        for step_sequence_list in self.stimulation_command:
+            #for stim_seq_obj in step_sequence_list:
+            xp.StimSeq.send_stim_seqs(step_sequence_list)
+                #xp.StimSeq.send(stim_seq_obj)
             # Convert durations into clock cycle ticks (33.33 microseconds per tick)
+            '''
             pulse_ticks = int(round(self.stimulation_parameters["duration"] / 33.33))
             interphase_ticks = int(round(pulse_ticks / 2))
             
@@ -193,12 +215,14 @@ class XippmexStimulator:
             # Build sequence header and dispatch down network card
             seq = xp.StimSeq(self.stimulation_parameters["cathode"], period_ticks, total_repeats, [pseg, ipi, nseg], action=0)
             xp.StimSeq.send(seq)
+            '''
 
         # Trigger your non-blocking asynchronous timer thread loop
         if self.stim_timer and self.stim_timer.is_alive():
             pass
         self.stim_timer = threading.Thread(target=self._handle_stimulus_timer, args=(self.stimulation_parameters["train_length"],), daemon=True)
         self.stim_timer.start()
+        return True
 
     def _handle_stimulus_timer(self, delay_seconds):
         time.sleep(delay_seconds)
@@ -216,13 +240,14 @@ class XippmexStimulator:
             return
         self.clear_cmd = []
         for chan in self.selected_channels:
-            clear_seg = xp.StimSegment(3, 0, 0, current_enable=False)
-            clear_seq = xp.StimSeq(chan, 20, 1, [clear_seg], action=0)
+            #print(f"Selected channel: {chan}")
+            clear_seg = xp.StimSegment(3, 0, -1, enable=False)
+            clear_seq = xp.StimSeq(chan, 20, 1, clear_seg, action=0)
             self.clear_cmd.append(clear_seq)
 
     def update_amplitude_resolution(self, new_res_val):
         if not self.is_initialized:
-            self.log_status("Xippmex not initialized.")
+            self.log_status("Xipppy not initialized.")
             return
             
         if new_res_val == self.amp_res_val:
@@ -239,15 +264,41 @@ class XippmexStimulator:
             xp.stim_enable_set(False)
             time.sleep(0.05)
             # Adjust the resolution step size on selected electrodes
-            xp.stim_set_res(self.selected_channels, new_res_idx)
+            # Only need to set for one electrode as all other electrodes on the same Front End will
+            # also be set. (So this assumes that the selected channels are on the same Front End.)
+            xp.stim_set_res(min(self.selected_channels), new_res_idx)
             time.sleep(0.05)
             xp.stim_enable_set(True)
 
         self.amp_res = new_res_idx
         self.amp_res_val = new_res_val
+        self.max_amp = self.max_steps_list[new_res_idx] * new_res_val
+        print(self.max_amp)
         self.stimulation_parameters["step"] = new_res_val
         self.log_status(f"Amplitude resolution set to: {self.amp_res_val} uA")
+        #self.update_stimulation_parameters(parameters=self.stimulation_parameters)
+        '''
+        [self.stimulation_command, amp_info] = generateStimulationCommand(
+            params=self.stimulation_parameters,
+            fast_settle=self.fast_settle, 
+            trig_chan=self.trig_channel
+        )
+        if not amp_info["validInput"]:
+            self.stimulation_parameters["amplitude"] = amp_info["ampValid"]
+            self.log_status(f"Amplitude corrected to: {amp_info['ampValid']} uA")
 
+        if not self.stimulation_parameters["sequential"]:
+            self.stimulation_parameters["amplitude_cathode"] = amp_info["ampCathode"]
+            self.log_status(f"Cathode amplitude set to {amp_info['ampCathode']} uA")
+
+            self.stimulation_parameters["amplitude_anode"] = amp_info["ampAnode"]
+            self.log_status(f"Anode amplitude set to {amp_info['ampAnode']} uA")
+        else:
+            self.stimulation_parameters["amplitude_cathode"] = amp_info["ampValid"]
+            self.stimulation_parameters["amplitude_anode"] = amp_info["ampValid"]
+        self.log_status("Parameters updated.")
+        self.log_status(f"Amplitude resolution set to: {self.amp_res_val} uA")
+        '''
     def set_gnd_ref(self, chan):
         if not self.is_initialized:
             return
@@ -307,11 +358,16 @@ class XippmexStimulator:
             if xp.stim_enable():
                 xp.stim_enable_set(False)
             # 2. Programmatically close out the underlying context wrapper tracking hooks
-            if self._ctx is not None:
-                self._ctx.exit(None, None, None)
+            flag = xp._close()
+            if flag == 0:
+                self.log_status("Xipppy connections detached cleanly.")
+            else:
+                self.log_status("Xipppy may have encountered an issue during disconnection.")
+            #if self._ctx is not None:
+            #    self._ctx.exit(None, None, None)
             self._ctx = None
             self.is_initialized = False
-            self.log_status("Xipppy connections detached cleanly.")
+            #self.log_status("Xipppy connections detached cleanly.")
         except Exception as e:
             self.is_initialized = False
             self.log_status(f"Error packing library context down: {e}")

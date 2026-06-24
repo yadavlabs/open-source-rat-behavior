@@ -295,6 +295,7 @@ def handle_data_vibration(self, line):
         self.serial_queue.put(msg)
         
     else:
+        print('here')
         print("[Arduino] " + data[0])
         self.serial_queue.put(data[0])
 
