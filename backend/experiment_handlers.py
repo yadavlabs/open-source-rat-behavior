@@ -178,6 +178,7 @@ def handle_data_vibration(self, line):
             else:
                 #play_pure_tone(frequency=11300, duration=float(self.stim_params["tone_durationL"])/1000, amplitude=0.5)
                 self.serial_queue.put("Stim")
+                self.trigger_stimulus()
         else:
             print("No stim")
             if self.session_params["session_type"] == "Initial Training" or self.session_params["experiment_type"] == "Detection":

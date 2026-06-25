@@ -131,9 +131,7 @@
           </button>
         </div>
 
-        <div 
-        *ngIf="isStimulatorVisible"
-         class="col-md-6">
+        <div class="col-md-6">
           <!-- (6b/7) UPDATE STIMULATOR PARAMETERS BUTTON: Allows the user to update stimulator parameters used by the Gibson. -->
           <button mat-raised-button
             (click)="UpdateParamsButtonPressed('Stimulator')"
@@ -286,93 +284,24 @@
     <div class="card cus-card" [formGroup]="stim_form">
       <h5 class="card-title" class="cus-card-header">Stimulator Parameters</h5>
 
-      <!-- (1/7) STIMULUS AMPLITUDE FORM FIELD: Allows the user to input the desired amplitude of the stimulus. -->
-      <mat-form-field class="cus-form-field">
-        <mat-label>
-          {{ stim_label_1_name }}
-        </mat-label>
-
-        <input matInput [formControlName]=stim_val_1_name>
-      </mat-form-field>
-
-      <!-- (2/7) STIMULUS FREQUENCY FORM FIELD: Allows the user to input the desired frequency of the stimulus. -->
-      <mat-form-field 
-       class="cus-form-field">
-        <mat-label>
-          {{ stim_label_4_name }}
-        </mat-label>
-
-        <input matInput [formControlName]="stim_val_4_name">
-      </mat-form-field>
-
-      <!-- (3/7) STIMULUS PULSE WIDTH FORM FIELD: Allows the user to input the desired pulse width of the stimulus. -->
-      <mat-form-field 
-      *ngIf="isStimulatorVisible"
-       class="cus-form-field">
-        <mat-label>
-          Enter Stimulus Pulse Width (us)
-        </mat-label>
-
-        <input matInput formControlName="stim_width">
-      </mat-form-field>
-
-      <!-- (4/7) STIMULUS INTER-PHASE INTERVAL FORM FIELD: Allows the user to input the desired inter-phase interval of the stimulus. -->
-      <mat-form-field 
-      *ngIf="isStimulatorVisible"
-       class="cus-form-field">
-        <mat-label>
-          Enter Stimulus Inter-Phase Interval (us)
-        </mat-label>
-
-        <input matInput formControlName="stim_interval">
-      </mat-form-field>
-
-      <!-- (5/7) STIMULUS PULSE NUMBER FORM FIELD: Allows the user to input the desired number of pulses for the stimulus. -->
-      <mat-form-field 
-      *ngIf="isStimulatorVisible"
-       class="cus-form-field">
-        <mat-label>
-          Enter Stimulus Pulse Number
-        </mat-label>
-
-        <input matInput formControlName="stim_pulNum">
-      </mat-form-field>
-
-      <!-- (6/7) DETECTION SESSION CV FORM FIELD: Allows the user to input the desired CV for a detection experiment. -->
-      <mat-form-field 
-        *ngIf="isStimulatorVisible"
-        class="cus-form-field">
-        <mat-label>
-          Enter Session CV
-        </mat-label>
-
-        <input matInput formControlName="sess_cv">
-      </mat-form-field>
-
+      <div *ngFor="let field of standardStimFields">
+        <mat-form-field class="cus-form-field">
+          <mat-label>
+            {{ field.label }}
+          </mat-label>
+          <input matInput [formControlName]="field.key">
+        </mat-form-field>
+      </div>
+      
       <div class="row">
         <!-- These form fields are closely related, so they are contained in the same row. -->
-
-        <div class="col-md-6">
-          <!-- (7a/7) LEFT PORT CV FORM FIELD: Allows the user to input the desired left port CV for a discrimination experiment. -->
+        <div *ngFor="let field of discriminationStimFields" class="col-md-6">
           <mat-form-field class="cus-form-field">
-            <mat-label>
-              Left Port {{ stim_label_2_name}}
-            </mat-label>
-
-            <input matInput [formControlName]=stim_val_2_name>
+            <mat-label>{{ field.label }}</mat-label>
+            <input matInput [formControlName]="field.key">
           </mat-form-field>
         </div>
 
-        <div class="col-md-6">
-          <!-- (7b/7) RIGHT PORT CV FORM FIELD: Allows the user to input the desired right port CV for a discrimination experiment. -->
-          <mat-form-field class="cus-form-field">
-            <mat-label>
-              Right Port {{ stim_label_2_name }}
-            </mat-label>
-
-            <input matInput [formControlName]=stim_val_3_name>
-          </mat-form-field>
-        </div>
       </div>
       
     </div>

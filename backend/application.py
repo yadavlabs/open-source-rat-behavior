@@ -225,6 +225,10 @@ def ArduinoSetUpFunctions():
 
 			elif (request.form["device"] == "Ripple"): # Checks that it's the Gibson
 				stim_manager.initialize()
+				ard_manager.assign_stimulus_callbacks(
+					trigger_stimulus=stim_manager.deliver_stimulus, 
+					update_stim_params=stim_manager.update_parameters
+				)
 				#gib.baudrate = int(request.form["baudRate"]) # Extracts the baud rate from sent params
 				#gib.port = request.form["port"] # Extracts the COM port from sent params
 				#gib.timeout = 2
@@ -253,7 +257,11 @@ def ArduinoSetUpFunctions():
 				#while ard.in_waiting > 0:
 				#		ard.readline()
 				#ard.close() # Closes the Arduino serial port
+				
 				ard_manager.disconnect()
+			
+			elif (request.form["device"] == "Ripple"): # Checks if the device is the Ripple
+				stim_manager.cleanup()
 			'''					
 			elif (request.form["device"] == "Gibson"): # Checks if the device is the Gibson
 				while gib.in_waiting > 0:
@@ -351,8 +359,9 @@ def ArduinoSetUpFunctions():
 
 		elif paramType == "Stimulator":
 			params = request.form["params"]
-			#p = json.loads(params)
-			ard_manager.update_params(json.loads(params))
+			p = json.loads(params)
+			print(p)
+			#ard_manager.update_params(json.loads(params))
 			#params = request.form["params"].split(',')
 			#s.changeAuditoryParams(ard, params, y) #changes stimulation parameters
 

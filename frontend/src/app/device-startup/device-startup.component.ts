@@ -11,6 +11,7 @@ import { Subscription } from 'rxjs';
 import { postDic } from '../postDic';
 import { DropDownInfo } from './DropDownInfo';
 import { CurrentTrialDataEle, CurrentTrialDataVibration } from './CurrentTrialData';
+import { FormFieldsSCS, FormFieldConfig, ExperimentModeSCS} from './StimFormFields';
 
 @Component({
   selector: 'app-device-startup',
@@ -21,11 +22,22 @@ import { CurrentTrialDataEle, CurrentTrialDataVibration } from './CurrentTrialDa
 
 export class DeviceStartupComponent {
   private sseSub!: Subscription;
+
+  stim_form!: FormGroup;
+
+  formFields: FormFieldConfig[] = FormFieldsSCS;
   ngOnInit(){
+
+    this.initForm();
+
     this.sseSub = this.sseService.paramUpdates$.subscribe(({ name, value }) => {
       this.updateParamFromArduino(name, value); // subsribe incoming data from sse.service.ts
     });
+
+    this.onSessChange(this.sess_type2)
+    this.onSessTypeChange(this.sess_type1)
   }
+  
   //paramMap: { [key: string]: (v: string) => void } = {};
   constructor(private flaskService: FlaskService, public sseService: SSEService) {
     // The following methods are used for initialization of selection values, which are defined below
@@ -39,7 +51,7 @@ export class DeviceStartupComponent {
     //};
     //console.log(typeof this.tableFields)
     //console.log(CurrentTrialTable)
-
+    /*
     
     if(this.isStimulatorVisible == false) {
       
@@ -72,19 +84,34 @@ export class DeviceStartupComponent {
       this.onSessTypeChange = this.onSessTypeChangeStim;
       this.UpdateParamsButtonPressed = this.UpdateParamsButtonPressedEle;
     }
-    this.onSessChange(this.sess_type2)
-    this.onSessTypeChange(this.sess_type1)
+      */
+    //this.onSessChange = this.onSessChangeStim;
+
+    
+  }
+  
+  
+  private initForm() {
+    const groupControls: { [key: string]: FormControl } = {};
+    this.formFields.forEach(field => {
+      groupControls[field.key] = new FormControl(field.value);
+    });
+    this.stim_form = new FormGroup(groupControls);
   }
 
+  standardStimFields = this.formFields.filter(f => !f.isDiscrimination);
+  discriminationStimFields = this.formFields.filter(f => f.isDiscrimination);
+
   // Tooltips for select buttons and form fields
-  FindPortToolTip = "Scans for connected Arduino boards and Gibson stimulators.";
+  FindPortToolTip = "Scans for connected Arduino boards.";
   ImportToolTip = "Imports previous session progress. Use if performing a multi-session experiment."
   ExportToolTip = "Exports current session progress. Use if performing a multi-session experiment."
-  ExpTypeToolTip = "Detection experiments feature one port with a CV, and Discrimination experiments feature each port with a unique CV."
+  ExpTypeToolTip = "Type of experiment to be conducted." 
+  //"Detection experiments feature one port with a CV, and Discrimination experiments feature each port with a unique CV."
 
   // Functionality variables
   inc_data: any; // Used with the SSEService BehaviorSubject observable subscription
-  
+  //ExperimentMode: ExperimentModeSCS = 'Initial Training';
   static parentCurTrial: object = {}; // This will be the dictionary of current trial data, initialized as an empty object
   static parentCurTrialEle: CurrentTrialDataEle = {
       sess_time: 'N/A',
@@ -184,7 +211,8 @@ export class DeviceStartupComponent {
   stim_val_4_name = "vibration_length";
 
   //stim_form: FormGroup;
-  stim_form = new FormGroup({
+
+/*   stim_form = new FormGroup({
     stim_A: new FormControl({ value: '200', disabled: false }),
     stim_fre: new FormControl({ value: '50', disabled: false }),
     sess_cv: new FormControl({ value: '0.8', disabled: false }),
@@ -197,7 +225,8 @@ export class DeviceStartupComponent {
     vibration_levelL: new FormControl({ value: '150', disabled: false }),
     vibration_levelR: new FormControl({ value: '100', disabled: false }),
     vibration_length: new FormControl({ value: '2000', disabled: false })
-  });
+  }); */
+  
 
   //stim_form_auditory = new FormGroup({
   //      stim_duration: new FormControl({ value: '500', disabled: false }),
@@ -205,7 +234,7 @@ export class DeviceStartupComponent {
   //      sess_toneR: new FormControl({ value: '', disabled: false })
   //});
   STIM_params: any;
-
+  STIM_params_payload: { [key: string]: any } = {};
 
 
   
@@ -233,6 +262,7 @@ export class DeviceStartupComponent {
       this.COM_res = data, // captures return response
       this.connectFlags[flag] = this.flaskService.checkConnect(data["message"]), // changes button flags based on response
       this.flaskService.enterLoop(device).subscribe(nested_data => { this.loop_res = nested_data }) // enters a state to read serial port
+      this.applyFieldStates(this.sess_type1)
     });
 
     // Checks whether an observable is created, and opens one if it's not created yet
@@ -259,8 +289,51 @@ export class DeviceStartupComponent {
     });
   }
 
-  UpdateParamsButtonPressed: (paramType: string) => void;
+  //UpdateParamsButtonPressed: (paramType: string) => void;
+  UpdateParamsButtonPressed(paramType: string) {
+    /*
+      This function is called when either "Update <type> Parameters" or "Export/Import Parameters" button is pressed.
+        It executes a POST request that sends the respective parameters to the Arduino (session) or Ripple (stimulator),
+        which the RESTful API processes.
+    */
+    if (paramType == "Session") {
 
+      // Updates the values of the SESS_params, based on user inputs that have changed since initialization
+      this.SESS_params = {
+        session_type: this.sess_type2, // Initial Training/CV Experiment
+        experiment_type: this.sess_type1, // Discrimination/Detection
+        session_length: this.sess_len.value, // Session Length (min)
+        response_time: this.sess_res_t.value, // Rodent Response Time (s)
+        forced_trials: this.forced_type, // Forced/Unforced
+        consecutive_error: this.sess_conerr.value, // Rodent Consecutive Error (n)
+      };
+      // The POST request itself, which captures the return response
+      this.flaskService.updateParams(this.SESS_params, paramType).subscribe(x => { this.SESS_res = x });
+    }
+    if (paramType == "Stimulator") {
+
+
+      this.STIM_params_payload = {};
+      this.formFields.forEach(field => {
+        
+        this.STIM_params_payload[field.key] = this.stim_form.get(field.key)?.value;;
+      });
+/*       this.STIM_params = {
+        //vibration_level: this.stim_form.get('vibration_level').value, // Detection vibration level
+        vibration_levelL: this.stim_form.get('vibration_levelL').value, // Same as above, but used if discrimination is selected
+        vibration_levelR: this.stim_form.get('vibration_levelR').value,
+        vibration_length: this.stim_form.get('vibration_length').value // Vibration length
+      } */
+      
+      this.flaskService.updateParams(this.STIM_params_payload, "Stimulator").subscribe(x => { this.STIM_res = x });
+      
+    }
+    else {
+      // The POST request, which captures the return response
+      this.flaskService.paramsImportExport(paramType).subscribe(x => { this.paramsImpExp_res = x });
+    }
+
+  }
   UpdateParamsButtonPressedEle(paramType: string) {
     /*
       This function is called when either "Update <type> Parameters" or "Export/Import Parameters" button is pressed.
@@ -396,7 +469,25 @@ export class DeviceStartupComponent {
     return DeviceStartupComponent.parentCurTrial;
   }
   
-  onSessChange: (selValue: any) => void;
+  //onSessChange: (selValue: any) => void;
+  onSessChange(selValue: any) {
+    
+    if (selValue == "Initial Training") {
+      this.connectFlags[2] = true; // changes the Initial Training flag for buttons/sliders
+      if (this.connectFlags[1] == true) {
+        this.flaskService.closeCOMs("Ripple").subscribe(x => {
+          this.COM_res = x,
+          this.connectFlags[1] = false
+        });
+      }
+      //this.stim_form.disable();
+
+    }
+    else {
+      this.connectFlags[2] = false; // changes the Initial Training flag for buttons/sliders
+    }
+    this.applyFieldStates(selValue);
+  }
 
   onSessChangeStim(selValue: any) {
     /*
@@ -408,6 +499,8 @@ export class DeviceStartupComponent {
       this.connectFlags[2] = true; // changes the Initial Training flag for buttons/sliders
 
       // changes the properties of select form fields
+      this.stim_form.disable();
+      /*
       this.stim_form.get('stim_A')?.disable();
       this.stim_form.get('stim_fre')?.disable();
       this.stim_form.get('sess_cv')?.disable();
@@ -416,10 +509,10 @@ export class DeviceStartupComponent {
       this.stim_form.get('stim_width')?.disable();
       this.stim_form.get('stim_interval')?.disable();
       this.stim_form.get('stim_pulNum')?.disable();
-
+      */
       // Handling on disconnecting the Gibson if it was connected previously
       if (this.connectFlags[1] == true) {
-        this.flaskService.closeCOMs("Gibson").subscribe(x => {
+        this.flaskService.closeCOMs("Ripple").subscribe(x => {
           this.COM_res = x,
           this.connectFlags[1] = false
         });
@@ -493,7 +586,10 @@ export class DeviceStartupComponent {
 
 
   }
-  onSessTypeChange: (selValue: any) => void;
+  //onSessTypeChange: (selValue: any) => void;
+  onSessTypeChange(selValue: any) {
+    this.applyFieldStates(selValue);
+  }
 
   onSessTypeChangeStim(selValue: any) {
     /*
@@ -531,6 +627,27 @@ export class DeviceStartupComponent {
       this.stim_form.get('vibration_levelL')?.enable();
       this.stim_form.get('vibration_levelR')?.enable();
     }
+  }
+
+  applyFieldStates(selValue: any) {
+    this.formFields.forEach(field => {
+      const control = this.stim_form.get(field.key);
+      if (!control) return;
+      
+      if (selValue == "Initial Training") {
+        control.disable();
+
+      } 
+      else {
+        if (selValue == "Detection" && this.connectFlags[2] == false) {
+          field.isDiscrimination ? control.disable() : control.enable();
+        } 
+        else if (selValue == "Discrimination" && this.connectFlags[2] == false) {
+          control.enable();
+        }
+      }
+
+    });
   }
 
   updateParamFromArduino(name: string, value: string) {

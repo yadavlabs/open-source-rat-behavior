@@ -83,6 +83,10 @@ class ArduinoManager:
         self.serial_stop_event = threading.Event() # event to stop serial thread
         self.serial_connected_event = threading.Event() # event to signal that the arduino is connected
         self._handle_data = lambda line: None # default, function for handling received data from the arduino 
+
+        self.trigger_stimulus = None
+        self.update_stim_params = None
+
         self.session_params = {} # dictionary of session parameters
         self.stim_params = {} # dictionary of stimulation parameters
         self.task_params = {} # dictionary for controlling stimulation parameter randomization
@@ -272,7 +276,10 @@ class ArduinoManager:
     # sets the experiment handler function (found in experiment_handlers.py)
     def assign_handler(self, handler_fnc):
         self._handle_data = handler_fnc.__get__(self, ArduinoManager)
-        
+
+    def assign_stimulus_callbacks(self, trigger_stimulus, update_stim_params):
+        self.trigger_stimulus = trigger_stimulus
+        self.update_stim_params = update_stim_params
 
 
     
