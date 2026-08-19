@@ -120,15 +120,25 @@ class ArduinoManager:
         while not self.serial_stop_event.is_set():
             try:
                 if self.socket_connection:#self.ard.is_open and self.ard.in_waiting:
-                    data = self.socket_connection.recv(2048).decode('utf-8', errors='ignore')
+                    data = self.socket_connection.recv(2048)#.decode('utf-8', errors='ignore')#.rstrip('\r\n')
                     if data:
-                        buffer += data
-                        while "\n" in buffer:
-                            line, buffer = buffer.split("\n", 1)
-                            line = line.strip()
-                            if line:
-                                print(f"Received data: {line}")
-                                self._handle_data(line)
+                        lines = data.split(b'\n')
+                        for line in lines:
+                            if line.strip():
+                                #print(f"[THREAD] Received data: {line.decode('utf-8', errors='ignore').strip()}")
+                                self._handle_data(line.decode('utf-8', errors='ignore').strip())
+                    #print(f"[THREA] Received data: {data}")
+                    #print(f"[THREA] Received data: {data.decode('utf-8', errors='ignore')}")
+                    #if data:
+                    #    print(f"[THREAD] Received data: {data}")
+                    #    self._handle_data(data)
+                    #    buffer += data+"\n"  # Append a newline to ensure proper line separation
+                    #    while "\n" in buffer:
+                    #        line, buffer = buffer.split("\n", 1)
+                    #        #line = line.decode('utf-8').rstrip()
+                    #        if line:
+                    #            print(f"Received data: {line}")
+                                #self._handle_data(line)
                     #line = self.ard.read_until(expected=b'\r\n').decode("utf").rstrip() #readline().decode('utf-8').strip()
                     #print(line)
                     #if line:
@@ -179,6 +189,7 @@ class ArduinoManager:
     # disconnect from arduino and stop listener
     def disconnect(self):
         if self.socket_connection:
+            self.socket_connection.sendall(b"DISCONNECT")  # Send stop command to Arduino
             self.serial_stop_event.set()
             time.sleep(0.2)  # Give some time for the thread to stop
             self.socket_connection.close()

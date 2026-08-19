@@ -28,6 +28,10 @@ def handle_docker_api(client_socket):
             success = start_serial_bridge(com_port, int(baudrate))
             response = "SUCCESS" if success else "FAILED"
             client_socket.sendall(f"{response}\n".encode('utf-8'))
+        elif request== "DISCONNECT":
+            print("[Proxy] Received disconnect request from Docker.")
+            client_socket.sendall(b"DISCONNECTED\n")
+
     except Exception as e:
         print(f"[Proxy] API thread error: {e}")
     finally:
@@ -57,8 +61,9 @@ def start_serial_bridge(com_port, baudrate):
             def serial_to_network():
                 while True:
                     try:
-                        if ser.is_open and ser.in_waiting > 0:
-                            conn.sendall(ser.read_until(expected=b'\r\n'))
+                        if ser.is_open and ser.in_waiting:
+                            msg = ser.read_until(expected=b'\r\n').decode("utf").rstrip()
+                            conn.sendall(f"{msg}\n".encode('utf-8'))
                             #conn.sendall(ser.read(ser.in_waiting))
                     except: break
             
@@ -68,7 +73,20 @@ def start_serial_bridge(com_port, baudrate):
                     try:
                         data = conn.recv(2048)
                         if not data: break
-                        ser.write(data)
+                        #print(f"[Proxy] Received from Docker: {data.decode('utf-8').strip()}")
+                        lines = data.split(b'\n')
+                        for line in lines:
+                            if line.strip() == b"DISCONNECT":
+                                print(f"[Proxy] Docker requested disconnection for {com_port}.")
+                                break
+                            if line.strip():
+                                print(f"[Proxy] Sending to Serial: {line.decode('utf-8').strip()}")
+                                ser.write(line)
+                        #if not data: break
+                        #if data.decode('utf-8').strip() == "DISCONNECT":
+                        #    print(f"[Proxy] Docker requested disconnection for {com_port}.")
+                        #    break
+                        #ser.write(data)
                     except: break
 
             t1 = threading.Thread(target=serial_to_network, daemon=True)

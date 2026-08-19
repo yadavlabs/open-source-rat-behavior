@@ -4,7 +4,8 @@ import xipppy as xp
 
 def defaultChannelMap():
     array_chans = list(range(1,17)) # labelling convention of electrode array being used 
-    ripple_chans = [1, 6, 9, 15, 2, 5, 10, 16, 3, 7, 12, 13, 4, 8, 11, 14] # ripple channels that map to electrodes on the array (based on connection/wiring/routing)
+    ripple_chans = [2, 5, 10, 16, 1, 6, 9, 15, 4, 8, 11, 14, 3, 7, 12, 13]
+    #[1, 6, 9, 15, 2, 5, 10, 16, 3, 7, 12, 13, 4, 8, 11, 14] # ripple channels that map to electrodes on the array (based on connection/wiring/routing)
     # xipppy returns ripple channels in 0-indexed format even though Trellis displays channels in 1-indexed format
     # so need to subtract 1 to convert to 0-indexed format.
     # further, all xipppy functions that take electrodes as input use 0-indexed format.
