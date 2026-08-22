@@ -43,6 +43,17 @@ from experiment_handlers import (
 	column_names_vibration
 
 )
+
+from experiment_configs import (
+	session_params,
+	stim_params_scs,
+	stim_task_params_scs,
+	current_trial_data_scs,
+	session_data_scs,
+	column_names_scs
+)
+from experiment_handler_2AFC import handle_data
+
 """
 	Variable declarations:
 	
@@ -120,7 +131,9 @@ stimParams = { #uses integers and floats (not strings) to populate dict
 '''
 #ard = serial.Serial() # A serial port object responsible for communication with the Arduino
 ard_manager = ArduinoManager()
+'''
 ard_manager.assign_handler(handle_data_vibration)
+
 ard_manager.initialize_experiment(
 	session_params_vibration, 
 	stim_params_vibration,
@@ -128,6 +141,16 @@ ard_manager.initialize_experiment(
 	current_trial_data_vibration, 
 	session_data_vibration,
 	column_names_vibration)
+'''
+ard_manager.assign_handler(handle_data)
+ard_manager.initialize_experiment(
+	session_params, 
+	stim_params_scs,
+	stim_task_params_scs,
+	current_trial_data_scs, 
+	session_data_scs,
+	column_names_scs
+)
 
 stim_manager = XipppyStimulator()
 
@@ -221,6 +244,8 @@ def ArduinoSetUpFunctions():
 						"message":"connection attempt timed out, failed",
 						"output":request.form["device"]
 					}, 408
+
+				
             # This code is completed if the "Connect Gibson" button was pressed
 
 			elif (request.form["device"] == "Ripple"): # Checks that it's the Gibson
@@ -229,6 +254,9 @@ def ArduinoSetUpFunctions():
 					trigger_stimulus=stim_manager.deliver_stimulus, 
 					update_stim_params=stim_manager.update_parameters
 				)
+				stim_manager.assign_stimulus_event_handler(ard_manager.notify_stimulus_delivered)
+				ard_manager.update_params(stim_manager.stimulation_parameters)
+				print(ard_manager.task_params)
 				#gib.baudrate = int(request.form["baudRate"]) # Extracts the baud rate from sent params
 				#gib.port = request.form["port"] # Extracts the COM port from sent params
 				#gib.timeout = 2
@@ -312,7 +340,6 @@ def ArduinoSetUpFunctions():
 			nested logic is used to separate functionality.
 	"""
 	if (request.form["task"] == "updateParams"):
-		#
 		#print(ard.is_open)
 		paramType = request.form["paramType"]
 		#print(request.form["paramType"])
@@ -360,7 +387,13 @@ def ArduinoSetUpFunctions():
 		elif paramType == "Stimulator":
 			params = request.form["params"]
 			p = json.loads(params)
-			print(p)
+			u = {key: int(value) for key, value in p.items()}
+			#stim_manager.update_parameters(u)
+			#print(f"[Flask] Updating stimulator parameters: {u}")
+			#print(f"Before: {ard_manager.stim_params}")
+			ard_manager.update_stim_params(u)
+			ard_manager.update_params(u)
+			#print(f"After: {ard_manager.stim_params}")
 			#ard_manager.update_params(json.loads(params))
 			#params = request.form["params"].split(',')
 			#s.changeAuditoryParams(ard, params, y) #changes stimulation parameters
@@ -395,7 +428,6 @@ View Function 3:
 @app.route("/to_dev",methods=["POST"])
 def WriteToCOMport():
 	#global ard, gib, y, currentTrialData, start_flag
-
 	if (request.form["device"] == "Arduino"): #check if POST is associated with Arduino
 
 		component = request.form["string"] #checks the button/switch that was pressed
@@ -442,6 +474,9 @@ def WriteToCOMport():
 				#_ = s.arduinoTask(ard, gib, y, sessionData, currentTrialData, stimParams)
 				s.readResponse(ard, y)
 	'''
+	elif (request.form["device"] == "Ripple"):
+		if request.form["string"] == "test-stim": #Test stimulation button pressed
+			stim_manager.deliver_stimulus()
 	elif (request.form["device"] == "Gibson"):
 		#print(request.form["string"])
 		

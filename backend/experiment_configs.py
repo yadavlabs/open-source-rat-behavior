@@ -90,11 +90,31 @@ stim_params_scs = {
 
 stim_task_params_scs = {
     "task_param_name": "amplitude", # name of stim parameter to be randomized
-    "task_array": list(range(25,25,250)), # stim parameters to be randomized
+    "task_array": list(range(25,250,25)), # stim parameters to be randomized
     "task_array_shuffled": [], # randomized permutation of task_array
     "task_idx": 0, # counter for indexing through task_array_shuffled
-    "shuffle_idx": 0 # counter for tracking number of times task_array has been re-shuffled -> when task_idx == len(task_array)
+    "shuffle_idx": 0, # counter for tracking number of times task_array has been re-shuffled -> when task_idx == len(task_array)
+    "all_param_names": ["amplitude","cathode", "anode", "frequency", "duration", "train_length"], # list of all stim parameters
+    "table_param_names": ["amplitude", "cathode", "anode"]
 }
+
+current_trial_data_scs = current_trial_data.copy()
+current_trial_data_scs.update({"amplitude": "-", "cathode": "-", "anode": "-"})
+
+session_data_scs = session_data.copy()
+session_data_scs.update({"amplitude": [], "cathode": [], "anode": [], "frequency": [], "duration": [], "train_length": []})
+column_names_scs = column_names.copy()
+column_names_scs.update({
+    "amplitude": "Amplitude (uA)", 
+    "cathode": "Cathode", 
+    "anode": "Anode", 
+    "frequency": "Frequency (Hz)", 
+    "duration": "Pulse Width (us)", 
+    "train_length": "Train Length (sec)"
+    }
+)
+
+
 
 
 #def get_stim_task_params():

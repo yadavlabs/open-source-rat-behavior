@@ -69,7 +69,8 @@ def start_serial_bridge(com_port, baudrate):
             
             # Subthread: Docker Network commands down to Serial
             def network_to_serial():
-                while True:
+                con_flag = True
+                while con_flag:
                     try:
                         data = conn.recv(2048)
                         if not data: break
@@ -78,6 +79,7 @@ def start_serial_bridge(com_port, baudrate):
                         for line in lines:
                             if line.strip() == b"DISCONNECT":
                                 print(f"[Proxy] Docker requested disconnection for {com_port}.")
+                                con_flag = False
                                 break
                             if line.strip():
                                 print(f"[Proxy] Sending to Serial: {line.decode('utf-8').strip()}")
@@ -88,7 +90,7 @@ def start_serial_bridge(com_port, baudrate):
                         #    break
                         #ser.write(data)
                     except: break
-
+            
             t1 = threading.Thread(target=serial_to_network, daemon=True)
             t1.start()
             network_to_serial()

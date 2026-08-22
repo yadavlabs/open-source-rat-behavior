@@ -8,6 +8,15 @@ if "%~1"=="-FIXED_CTRL_C" (
 SETLOCAL EnableDelayedExpansion
 
 echo ====================================================
+echo  Starting Docker Engine and Local Laboratory Hardware Interface
+echo ====================================================
+call "%~dp0start-docker-engine.bat"
+if errorlevel 1 (
+    echo [ERROR] Failed to start Docker Engine.
+    pause
+    exit /b
+)
+echo ====================================================
 echo  Initializing Local Laboratory Hardware Interface  
 echo ====================================================
 

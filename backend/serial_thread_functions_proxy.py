@@ -25,7 +25,8 @@ COMMAND_MAP = {
     "pause": lambda state: f"{'p' if state == 'true' else 'u'}",
     "stop": lambda state: "Q",
     "start": lambda state: "b",
-    "test-stim": lambda state: "S"
+    "test-stim": lambda state: "S",
+    "stim-delivered": lambda state: "T"
 }
 
 # dictionary of "GET" commands for returning parameters currently set on the Arduino
@@ -108,6 +109,7 @@ class ArduinoManager:
         self.current_trial_data = current_trial_data
         self.session_data = session_data
         self.column_names = column_names
+        self.update_stim_params = self.update_params
         if "task_array" in self.task_params: #might just remove this but trying to manage backwards compatibility. 
             #I already have immediately made this not backwards compatible by isolating randomization params to a new dictionary
             # but oh well
@@ -248,7 +250,8 @@ class ArduinoManager:
                 self.stim_params[param] = val
                 #print("Stim Parameter Updated: " + param)
             if update_val:
-                self.write_utf(SET_PARAM_MAP[param](val))
+                if param in SET_PARAM_MAP:
+                    self.write_utf(SET_PARAM_MAP[param](val))
                 update_val = False
             
                 #print("Stim" + param)
@@ -261,6 +264,7 @@ class ArduinoManager:
             self.task_params["task_idx"] = 0
             self.task_params["task_array_shuffled"] = random.sample(self.task_params["task_array"], len(self.task_params["task_array"]))
             self.task_params["shuffle_idx"] = self.task_params["shuffle_idx"] + 1 # first shuffle
+            #print(self.task_params["task_array_shuffled"]  )
 
         
     def randomize_task_parameter(self):
@@ -272,9 +276,12 @@ class ArduinoManager:
         
         # format next value as dictionary and send for updates
         # task_param_name specifies the target parameter for updating
-        next_param = {self.task_params["task_param_name"] : str(self.task_params["task_array_shuffled"][self.task_params["shuffle_idx"]])}
+        next_param = {self.task_params["task_param_name"] : self.task_params["task_array_shuffled"][self.task_params["task_idx"]]}
+        print(f"Task array randomization: {self.task_params['task_array_shuffled']}, Next parameter: {next_param}")
+        self.update_stim_params(next_param)
         self.update_params(next_param)
         self.task_params["task_idx"] = self.task_params["task_idx"] + 1 #incriment task_idx
+        print(f"Task param index: {self.task_params['task_idx']}, Shuffle index: {self.task_params['shuffle_idx']}")
 
 
     def get_queue(self):
@@ -288,9 +295,13 @@ class ArduinoManager:
     def assign_handler(self, handler_fnc):
         self._handle_data = handler_fnc.__get__(self, ArduinoManager)
 
+    
     def assign_stimulus_callbacks(self, trigger_stimulus, update_stim_params):
         self.trigger_stimulus = trigger_stimulus
         self.update_stim_params = update_stim_params
+
+    def notify_stimulus_delivered(self):
+        self.send_command('stim-delivered', 'true')  # Notify Arduino that stimulus has been delivered        
 
 
     

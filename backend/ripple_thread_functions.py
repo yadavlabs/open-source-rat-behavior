@@ -39,6 +39,7 @@ class XipppyStimulator:
         self.gnd_channel = None
         self.ref_channel = None
         self.trig_channel = None
+        self.stimulus_event_handler = None  # Placeholder for external callback registration
 
         # Configuration and mapping constraints
         self.channel_map = channel_map if channel_map is not None else {}
@@ -49,7 +50,7 @@ class XipppyStimulator:
         self.stimulation_parameters = {
             "anode": 16, "cathode": 1, "sequential": False,
             "frequency": 50, "duration": 200, "amplitude": 200,
-            "train_length": 2, "step": 2, "amplitude_cathode": 200,
+            "train_length": 2, "step": 5, "amplitude_cathode": 200,
             "amplitude_anode": 200
         }
         
@@ -153,12 +154,14 @@ class XipppyStimulator:
             return
 
         for field, new_param in parameters.items():
-            if field in ["anode", "cathode"] and self.apply_map:
-                self.stimulation_parameters[field] = self.channel_map.get(new_param, new_param)
-            elif field == "step":
-                self.update_amplitude_resolution(new_param)
-            else:
-                self.stimulation_parameters[field] = new_param
+            if field in self.stimulation_parameters:
+                if field in ["anode", "cathode"] and self.apply_map:
+                    self.stimulation_parameters[field] = self.channel_map.get(new_param, new_param)
+                elif field == "step":
+                    self.update_amplitude_resolution(new_param)
+                else:
+                    self.stimulation_parameters[field] = new_param
+                self.log_status(f"Parameter '{field}' updated to: {self.stimulation_parameters[field]}")
         
         self.stimulation_command, amp_info = generateStimulationCommand(
             params=self.stimulation_parameters,
@@ -226,8 +229,32 @@ class XipppyStimulator:
 
     def _handle_stimulus_timer(self, delay_seconds):
         time.sleep(delay_seconds)
+        self.stimulus_event_handler() if hasattr(self, 'stimulus_event_handler') else None
         self.log_status("Stimulation complete. StimulusDelivered event handled.")
 
+    def assign_stimulus_event_handler(self, event_handler):
+            """Allows external code to register a callback for stimulus delivery events."""
+            self.stimulus_event_handler = event_handler
+            self.log_status("External stimulus event handler registered.")
+
+    def deliver_stimulus_external(self, stimulus_timer_fcn):
+        # passed to arduino manager. Difference is that the "handle_stimulus_timer" returns a value that can be written to the arduino
+        # via the arduino manager to indicate that the stimulus has been delivered to progress the trial. This might not be a good idea.
+        if not self.is_initialized:
+            self.log_status("Xipppy not initialized.")
+            return
+        
+        self.log_status("Delivering stimulation train...")
+        xp.stim_enable_set(True)
+        for step_sequence_list in self.stimulation_command:
+            xp.StimSeq.send_stim_seqs(step_sequence_list)
+        if self.stim_timer and self.stim_timer.is_alive():
+            pass
+        self.stim_timer = threading.Thread(target=stimulus_timer_fcn, args=(self.stimulation_parameters["train_length"],), daemon=True)
+        self.stim_timer.start()
+        return True
+
+    
     def stop_stimulus(self):
         if not self.is_initialized:
             return
@@ -348,6 +375,7 @@ class XipppyStimulator:
         except Exception as e:
             self.log_status(f"Catching file locking errors calmly: {e}")
             self.is_recording = False
+
 
     def cleanup(self):
         """Teardown method to safely disconnect hardware lines."""

@@ -31,13 +31,16 @@ def handle_data(self, line):
         trial_time = int(data[1]) / 1000 # to seconds
         trial_number = data[2]
         ## update data 
+        for key in self.current_trial_data:
+            if key not in ["sess_time", "trial_n", "per_cor"]:
+                self.current_trial_data[key] = "-"
         self.current_trial_data["sess_time"] = str(round(trial_time / 60,2))
         self.current_trial_data["trial_n"] = trial_number
-        self.current_trial_data["trial_type"] = "-"
-        self.current_trial_data["forced"] = "-"
-        self.current_trial_data["vibration_level"] = "-"
-        self.current_trial_data["vibration_length"] = "-"
-        self.current_trial_data["trial_res"] = "-"
+        #self.current_trial_data["trial_type"] = "-"
+        #self.current_trial_data["forced"] = "-"
+        #self.current_trial_data["vibration_level"] = "-"
+        #self.current_trial_data["vibration_length"] = "-"
+        #self.current_trial_data["trial_res"] = "-"
         #"sess_time"] = str(round(trial_time / 60,2)) #to minutes
         #self.current_trial_data["trial_n"] = data[2]
         #self.current_trial_data["trial_type"] = "-"
@@ -60,32 +63,47 @@ def handle_data(self, line):
                 #self.session_data["frequency"].append([])
                 #self.session_data["CV"].append([])
             else:
-                self.session_data["vibration_level"].append([])
-                self.session_data["vibration_length"].append([])
+                for param_name in self.task_params["all_param_names"]:
+                    self.session_data[param_name].append([])
+                #self.session_data["vibration_level"].append([])
+                #self.session_data["vibration_length"].append([])
                 #self.session_data["amplitude"].append([])
                 #self.session_data["frequency"].append([])
                 #self.session_data["CV"].append([])
         else: #left trial, stimulation if CV experiment is selected
-                
+            print("[Arduino] Session Type: " + self.session_params["session_type"])
             if self.session_params["session_type"] != "Initial Training": #self.stim_params["stim_enable"] == 1:
+                print("[Arduino] Randomization flag: " + str(self.stim_params["randomize"]))
                 if self.stim_params["randomize"] == 1:
+                    print("[Arduino] Randomizing stimulation parameter for this trial...")
                     self.randomize_task_parameter()
+
                 #if stimParams["randomize"] == 1:
                 #        randomizeAmplitude(gib, stimParams, y)
                 #print("HERE")
                 #print(stimParams["tone_durationL"])
-                self.current_trial_data["vibration_level"] = self.stim_params["vibration_levelL"]
-                self.current_trial_data["vibration_length"] = self.stim_params["vibration_length"]
+                for param_name in self.task_params["table_param_names"]:
+                    self.current_trial_data[param_name] = self.stim_params[param_name]
+                for param_name in self.task_params["all_param_names"]:
+                    print(param_name)
+                    
+                    self.session_data[param_name].append(self.stim_params[param_name])
+                    print(self.session_data[param_name][-1])
+                
+                #self.current_trial_data["vibration_level"] = self.stim_params["vibration_levelL"]
+                #self.current_trial_data["vibration_length"] = self.stim_params["vibration_length"]
                 #currentTrialData["stim_fre"] = str(stimParams["frequency"])
                 #currentTrialData["CV"] = str(stimParams["CV"])
-                self.session_data["vibration_level"].append(self.stim_params["vibration_levelL"])
-                self.session_data["vibration_length"].append(self.stim_params["vibration_length"])
+                #self.session_data["vibration_level"].append(self.stim_params["vibration_levelL"])
+                #self.session_data["vibration_length"].append(self.stim_params["vibration_length"])
                 #self.session_data["amplitude"].append(stimParams["amplitude"])
                 #self.session_data["frequency"].append(stimParams["frequency"])
                 #self.session_data["CV"].append(stimParams["CV"])
             else:
-                self.session_data["vibration_level"].append([])
-                self.session_data["vibration_length"].append([])
+                for param_name in self.task_params["all_param_names"]:
+                    self.session_data[param_name].append([])
+                #self.session_data["vibration_level"].append([])
+                #self.session_data["vibration_length"].append([])
                 #self.session_data["amplitude"].append([])
                 #self.session_data["frequency"].append([])
                 #self.session_data["CV"].append([])
@@ -115,11 +133,11 @@ def handle_data(self, line):
                 self.serial_queue.put("Stim")
                 self.trigger_stimulus()
         else:
-            print("No stim")
+            #print("No stim")
             if self.session_params["session_type"] == "Initial Training" or self.session_params["experiment_type"] == "Detection":
                 self.serial_queue.put("No stim")
             else:
-                print(float(self.stim_params["vibration_levelR"]))
+                #print(float(self.stim_params["vibration_levelR"]))
                 #play_pure_tone(frequency=11300, duration=float(self.stim_params["tone_durationR"])/1000, amplitude=0.5)
                 self.serial_queue.put("Right port stim")
                 

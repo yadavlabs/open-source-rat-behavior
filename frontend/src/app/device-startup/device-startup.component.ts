@@ -10,7 +10,7 @@ import { Subscription } from 'rxjs';
 // Importing interfaces
 import { postDic } from '../postDic';
 import { DropDownInfo } from './DropDownInfo';
-import { CurrentTrialDataEle, CurrentTrialDataVibration } from './CurrentTrialData';
+import { CurrentTrialDataEle, CurrentTrialDataVibration, TRIAL_TABLE_FIELDS_SPATIAL_SCS, CurrentTrialDataSpatialSCS, createDefualtTrialDataSpatialSCS } from './CurrentTrialData';
 import { FormFieldsSCS, FormFieldConfig, ExperimentModeSCS} from './StimFormFields';
 
 @Component({
@@ -112,7 +112,13 @@ export class DeviceStartupComponent {
   // Functionality variables
   inc_data: any; // Used with the SSEService BehaviorSubject observable subscription
   //ExperimentMode: ExperimentModeSCS = 'Initial Training';
-  static parentCurTrial: object = {}; // This will be the dictionary of current trial data, initialized as an empty object
+  // static parentCurTrial: object = {}; // This will be the dictionary of current trial data, initialized as an empty object
+  //static parentCurTrial: CurrentTrialDataSpatialSCS = { ...DEFUALT_TRIAL_DATA_SPATIAL_SCS }; // This will be the dictionary of current trial data, initialized as an empty object
+  
+  tableFields = TRIAL_TABLE_FIELDS_SPATIAL_SCS;
+  static parentCurTrial: CurrentTrialDataSpatialSCS = createDefualtTrialDataSpatialSCS(); // This will be the dictionary of current trial data, initialized as an empty object
+  stimSource: string = 'Ripple';
+  
   static parentCurTrialEle: CurrentTrialDataEle = {
       sess_time: 'N/A',
       trial_n: 'N/A',
@@ -154,16 +160,17 @@ export class DeviceStartupComponent {
     false, // Initial Training Flag (true when selected, false when not selected)
     true // override flag for auditory experiment where arduino controls stim and not gibson
   ];
-  tableFields = [
-    { key: 'sess_time', label: 'Time (min)'},
-    { key: 'trial_n', label: 'Number' },
-    { key: 'trial_type', label: 'Type' },
-    { key: 'forced', label: 'Forced' },
-    { key: 'vibration_level', label: 'Vibration Level' },
-    { key: 'vibration_length', label: 'Vibration Length' },
-    { key: 'trial_res', label: 'Response' },
-    { key: 'per_cor', label: 'Correct (%)' }
-  ];
+  //tableFields = [
+  //    { key: 'sess_time', label: 'Time (min)'},
+  //    { key: 'trial_n', label: 'Number' },
+  //    { key: 'trial_type', label: 'Type' },
+  //    { key: 'forced', label: 'Forced' },
+  //    { key: 'vibration_level', label: 'Vibration Level' },
+  //  { key: 'vibration_length', label: 'Vibration Length' },
+  //  { key: 'trial_res', label: 'Response' },
+  //  { key: 'per_cor', label: 'Correct (%)' }
+  //];
+  
   observeOpenFlag = false; // flag for when the observable is opened
   isStimulatorVisible = false; // flag for visibility of the Gibson stimulator parameters, set to false for auditory experiment
 
@@ -186,7 +193,7 @@ export class DeviceStartupComponent {
 
   // Session variables
 
-  exp_type2 = ["Initial Training", "CV Experiment"];
+  exp_type2 = ["Initial Training", "Spatial SCS"];//["Initial Training", "CV Experiment"];
   sess_type2: string = "Initial Training";
   exp_type1 = ["Discrimination", "Detection"];
   sess_type1: string = "Detection";

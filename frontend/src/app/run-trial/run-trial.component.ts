@@ -24,6 +24,7 @@ export class RunTrialComponent {
   post_res: any; // records responses from the POST requests
   pause_label: string = "Pause"; // text to display for the print toggle slider
   @Input() childFlags: any; // the inherited flags to coordinate button enabling/disabling
+  @Input() childStimSource: string; // the inherited stimulator source to send to the backend for stimulation
   @Input() childCurTrial: any; // the inherited current trial data to display in the table
   @Input() childTrialTable: any;
   man_flag: boolean = false; // flag to determine whether the manual control buttons/toggle sliders are enabled/disabled
