@@ -395,6 +395,14 @@ export class DeviceStartupComponent {
       this.flaskService.paramsImportExport(paramType).subscribe(x => { this.paramsImpExp_res = x });
     }
   }
+
+  async HandleParamImportExportButtonPress(paramType: string) {
+    
+    if (paramType === 'export') {
+      
+    }
+  }
+
   UpdateParamsButtonPressedAuditory(paramType: string) {
     /*
       This function is called when either "Update <type> Parameters" or "Export/Import Parameters" button is pressed.

@@ -71,6 +71,72 @@ export class RunTrialComponent {
     });
   }
 
+  async handleDataExportFD(chosenFormat: 'xlsx' | 'csv' = 'xlsx') {
+  if (this.isExporting) return;
+  this.isExporting = true;
+
+  console.log("[Angular] Requesting behavior spreadsheet generation via Docker bridge...");
+
+  this.flaskService.downloadSessionFile(chosenFormat).subscribe({
+    next: async (incomingFileBlob: Blob) => {
+      
+      // 1. Check if the browser supports the modern File System Access API
+      if ('showSaveFilePicker' in window) {
+        try {
+          // Define file options and format restrictions for the native popup
+          const options = {
+            suggestedName: `rat_behavior_session.${chosenFormat}`,
+            types: chosenFormat === 'xlsx' ? [
+              {
+                description: 'Excel Spreadsheet',
+                accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] }
+              }
+            ] : [
+              {
+                description: 'CSV File',
+                accept: { 'text/csv': ['.csv'] }
+              }
+            ]
+          };
+
+          // 2. Open the Native File Explorer "Save As" Prompt Box
+          const fileHandle = await (window as any).showSaveFilePicker(options);
+
+          // 3. Stream the file binary directly into the user-selected folder path
+          const writableStream = await fileHandle.createWritable();
+          await writableStream.write(incomingFileBlob);
+          await writableStream.close();
+
+          console.log("[Angular] Native save location successfully processed by the system.");
+        } catch (err) {
+          // Handle cases where the user clicks "Cancel" inside the dialog
+          console.warn("User aborted the save dialog or picker failed:", err);
+        }
+      } else {
+        // 4. FALLBACK: Use your exact original hidden anchor link strategy for unsupported browsers
+        console.log("[Angular] showSaveFilePicker unsupported. Using anchor tag fallback.");
+        const localDownloadUrl = window.URL.createObjectURL(incomingFileBlob);
+        const hiddenAnchor = document.createElement('a');
+        hiddenAnchor.href = localDownloadUrl;
+        hiddenAnchor.download = `rat_behavior_session.${chosenFormat}`;
+        
+        document.body.appendChild(hiddenAnchor);
+        hiddenAnchor.click();
+        
+        document.body.removeChild(hiddenAnchor);
+        window.URL.revokeObjectURL(localDownloadUrl);
+      }
+
+      this.isExporting = false;
+    },
+    error: (err) => {
+      console.error("Export pipeline encountered a transmission fault:", err);
+      this.isExporting = false;
+    }
+  });
+}
+
+
   SessionButtonsPressed(butString: string, device: string) {
     /*
       This function is responsible for any of the session buttons being pressed. The same information is sent

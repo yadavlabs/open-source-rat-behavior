@@ -83,15 +83,15 @@
           </tr>
         </tbody>
       </table>
+      
 
       <!-- (2/2) EXPORT DATA: Allows the user to export the data as an Excel file. -->
       <button mat-raised-button
-        (click)="handleDataExport('xlsx')"
+        (click)="handleDataExportFD('xlsx')"
         [disabled]="isExporting"
         class="export-but"
         matTooltip={{ExpDataToolTip}}>
         {{ isExporting ? 'Exporting...' : 'Export Data' }}
-          Export Data
       </button>
       
     </div>
