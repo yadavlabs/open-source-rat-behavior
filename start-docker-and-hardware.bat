@@ -6,7 +6,6 @@ if "%~1"=="-FIXED_CTRL_C" (
     goto :EOF
 )
 SETLOCAL EnableDelayedExpansion
-
 echo ====================================================
 echo  Starting Docker Engine and Local Laboratory Hardware Interface
 echo ====================================================
@@ -16,6 +15,7 @@ if errorlevel 1 (
     pause
     exit /b
 )
+
 echo ====================================================
 echo  Initializing Local Laboratory Hardware Interface  
 echo ====================================================
@@ -28,6 +28,18 @@ if not exist "%CONDA_PATH%\Scripts\conda.exe" (
 )
 if not exist "%CONDA_PATH%\Scripts\conda.exe" (
     set "CONDA_PATH=%ProgramData%\Miniconda3"
+)
+
+REM 1.2 if no miniconda, check for anaconda installation
+REM These are pretty bad checks and only works on Windows (but its a bat file anyway)
+if not exist "%CONDA_PATH%\Scripts\conda.exe" (
+    set "CONDA_PATH=%USERPROFILE%\Anaconda3"
+)
+if not exist "%CONDA_PATH%\Scripts\conda.exe" (
+    set "CONDA_PATH=%USERPROFILE%\AppData\Local\Continuum\Anaconda3"
+)
+if not exist "%CONDA_PATH%\Scripts\conda.exe" (
+    set "CONDA_PATH=%ProgramData%\Anaconda3"
 )
 
 REM exit if no conda installation is found (could also check for Anaconda)

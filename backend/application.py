@@ -405,20 +405,30 @@ def ArduinoSetUpFunctions():
 		paramType = request.form["paramType"]
 		if paramType == "import":
 			ard_manager.serial_queue.put("Loading task parameters...")
-			task_params = loadSessionTaskParams()
-			if not task_params:
-				ard_manager.serial_queue.put("Load cancelled.")
-			else:
-				ard_manager.task_params = task_params
-				print(task_params)
+
+			payload_str = request.form.get("payload")
+			if not payload_str:
+				ard_manager.serial_queue.put("Load failed. No data recieved.")
+				return {"task": request.form["task"], "message": "No data recieved", "output": []}
+			
+			task_params = json.loads(payload_str) 
+			ard_manager.task_params = task_params
+			#loadSessionTaskParams()
+			#if not task_params:
+			#	ard_manager.serial_queue.put("Load cancelled.")
+			#else:
+			#	ard_manager.task_params = task_params
+			#	print(task_params)
+			return {"task": request.form["task"], "message": "success", "output": []}
 
 		elif paramType == "export":
 			ard_manager.serial_queue.put("Saving task parameters...")
-			msg = saveSessionTaskParams(ard_manager.task_params)
-			ard_manager.serial_queue.put(msg)
+			#msg = saveSessionTaskParams(ard_manager.task_params)
+			#ard_manager.serial_queue.put(msg)
+			return jsonify(ard_manager.task_params)
 
-		print(request.form)
-		return {"task":request.form["task"], "message":"return", "output":[]}
+		#print(request.form)
+		#return {"task":request.form["task"], "message":"return", "output":[]}
 		
 
 """

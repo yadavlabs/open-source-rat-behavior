@@ -397,11 +397,96 @@ export class DeviceStartupComponent {
   }
 
   async HandleParamImportExportButtonPress(paramType: string) {
-    
-    if (paramType === 'export') {
-      
+
+  // --- NATIVE EXPORT PARAMETERS PIPELINE ---
+  if (paramType === 'export') {
+    // 1. Tell Flask to return the raw JSON object configuration array instead of writing a local file
+    this.flaskService.paramsImportExport('export').subscribe({
+      next: async (backendData: any) => {
+        const jsonString = JSON.stringify(backendData, null, 2);
+        const jsonBlob = new Blob([jsonString], { type: 'application/json' });
+
+        if ('showSaveFilePicker' in window) {
+          try {
+            // 2. Summon the native OS File Explorer save box
+            const options = {
+              suggestedName: 'experimental_parameters.json',
+              types: [{
+                description: 'JSON Configuration File',
+                accept: { 'application/json': ['.json'] }
+              }]
+            };
+            const fileHandle = await (window as any).showSaveFilePicker(options);
+            const writableStream = await fileHandle.createWritable();
+            await writableStream.write(jsonBlob);
+            await writableStream.close();
+            
+            this.paramsImpExp_res = "Parameters exported successfully via browser.";
+          } catch (err) {
+            console.warn("User canceled parameter export save dialog:", err);
+          }
+        } else {
+          // Fallback anchor tag if modern picker is unsupported
+          const localUrl = window.URL.createObjectURL(jsonBlob);
+          const anchor = document.createElement('a');
+          anchor.href = localUrl;
+          anchor.download = 'experimental_parameters.json';
+          document.body.appendChild(anchor);
+          anchor.click();
+          document.body.removeChild(anchor);
+          window.URL.revokeObjectURL(localUrl);
+        }
+      },
+      error: (err) => console.error("Failed fetching export data configuration:", err)
+    });
+  }
+
+  // --- NATIVE IMPORT PARAMETERS PIPELINE ---
+  if (paramType === 'import') {
+    if ('showOpenFilePicker' in window) {
+      try {
+        // 1. Open the native OS File Explorer selection prompt
+        const [fileHandle] = await (window as any).showOpenFilePicker({
+          types: [{
+            description: 'JSON Configuration File',
+            accept: { 'application/json': ['.json'] }
+          }],
+          multiple: false
+        });
+
+        // 2. Read the selected file contents directly into application memory
+        const file = await fileHandle.getFile();
+        const fileText = await file.text();
+        const parsedJson = JSON.parse(fileText);
+
+        // 3. Send the parsed JSON schema downstream to Flask inside your HTTP POST package
+        this.flaskService.paramsImportExport('import', parsedJson).subscribe({
+          next: (response) => {
+            this.paramsImpExp_res = response;
+            console.log("Parameters successfully synced to Docker container.");
+          },
+          error: (err) => console.error("Parameter payload synchronizer transmission error:", err)
+        });
+
+      } catch (err) {
+        console.warn("User canceled parameter import loading dialog:", err);
+      }
+    } else {
+      // Basic fallback: Trigger an invisible file input element if picker isn't supported
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = async (e: any) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const text = await file.text();
+        this.flaskService.paramsImportExport('import', JSON.parse(text)).subscribe(x => this.paramsImpExp_res = x);
+      };
+      input.click();
     }
   }
+}
+
 
   UpdateParamsButtonPressedAuditory(paramType: string) {
     /*

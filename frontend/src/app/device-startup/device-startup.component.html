@@ -148,7 +148,7 @@
         <div class="col-md-6">
           <!-- (7a/7) IMPORT PARAMETERS BUTTON: Allows the user to import multi-session experimental progress. -->
           <button mat-raised-button
-            (click)="UpdateParamsButtonPressed('import')"
+            (click)="HandleParamImportExportButtonPress('import')"
             class="cus-button"
             matTooltip={{ImportToolTip}}>
               Import Parameters
@@ -158,7 +158,7 @@
         <div class="col-md-6">
           <!-- (7b/7) EXPORT PARAMETERS BUTTON: Allows user to export loaded parameters into *.cvs/*.xlsx file -->
           <button mat-raised-button
-            (click)="UpdateParamsButtonPressed('export')"
+            (click)="HandleParamImportExportButtonPress('export')"
             class="cus-button"
             matTooltip={{ExportToolTip}}>
               Export Parameters

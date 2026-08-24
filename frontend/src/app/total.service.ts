@@ -150,8 +150,9 @@ export class FlaskService {
 
     return this.http.post<postDic>(this.URL1, body); // returns a status message
   }
+  
 
-  paramsImportExport(paramType: string) {
+  paramsImportExport(paramType: string, jsonPayload: any = null) {
     /*
       This function is responsible for handling the importing and exporting of
         parameters necessary for multi-session experiments. This is the exception
@@ -162,6 +163,9 @@ export class FlaskService {
     body = body.set("task", "paramsImpExp"); // ...
     body = body.set("paramType", paramType); // ...
 
+    if (paramType === 'import' && jsonPayload) {
+      body = body.set("payload", JSON.stringify(jsonPayload));
+    }
     return this.http.post(this.URL1, body); // returns a status message
   }
 
