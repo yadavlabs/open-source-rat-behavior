@@ -136,6 +136,73 @@ export class RunTrialComponent {
   });
 }
 
+async handleDataExportFD2(chosenFormat: 'xlsx' | 'csv' = 'xlsx') {
+  if (this.isExporting) return;
+  this.isExporting = true;
+
+  this.flaskService.downloadSessionFile2(chosenFormat).subscribe({
+    next: async (response: any) => {
+      // 1. Extract the binary file array body
+      const incomingFileBlob = response.body; 
+
+      // 2. Parse the python-defined filename out of the Content-Disposition header
+      let finalFilename = `rat_behavior_session.${chosenFormat}`; // Local fallback name
+
+      const contentDisposition = response.headers.get('content-disposition');
+      if (contentDisposition) {
+        const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+        if (matches != null && matches[1]) { 
+          finalFilename = matches[1].replace(/['"]/g, ''); // Strip quotes out
+        }
+      }
+
+      // 3. Launch native Save Picker using the Python-defined filename
+      if ('showSaveFilePicker' in window) {
+        try {
+          const options = {
+            suggestedName: finalFilename, // <--- Dynamic filename passed from Python!
+            types: chosenFormat === 'xlsx' ? [
+              {
+                description: 'Excel Spreadsheet',
+                accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] }
+              }
+            ] : [
+              {
+                description: 'CSV File',
+                accept: { 'text/csv': ['.csv'] }
+              }
+            ]
+          };
+
+          const fileHandle = await (window as any).showSaveFilePicker(options);
+          const writableStream = await fileHandle.createWritable();
+          await writableStream.write(incomingFileBlob);
+          await writableStream.close();
+        } catch (err) {
+          console.warn("User aborted save window context:", err);
+        }
+      } else {
+        // Fallback Anchor handling
+        const localDownloadUrl = window.URL.createObjectURL(incomingFileBlob);
+        const hiddenAnchor = document.createElement('a');
+        hiddenAnchor.href = localDownloadUrl;
+        hiddenAnchor.download = finalFilename;
+        document.body.appendChild(hiddenAnchor);
+        hiddenAnchor.click();
+        document.body.removeChild(hiddenAnchor);
+        window.URL.revokeObjectURL(localDownloadUrl);
+      }
+
+      this.isExporting = false;
+    },
+    error: (err) => {
+      console.error("Export pipeline transmission fault:", err);
+      this.isExporting = false;
+    }
+  });
+}
+
+
 
   SessionButtonsPressed(butString: string, device: string) {
     /*

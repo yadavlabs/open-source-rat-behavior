@@ -98,8 +98,8 @@ def saveSessionDataD(session_data, column_names, file_format="xlsx"):
     
     # 1. Map your row arrays directly to a pandas DataFrame and apply your structural headers
     df = pd.DataFrame(session_data)
-    df.columns = column_names
-    
+    #df.columns = column_names
+    df.rename(columns=column_names, inplace=True)
     # 2. Allocate an isolated memory byte block to capture file data
     file_stream = io.BytesIO()
     
@@ -108,7 +108,7 @@ def saveSessionDataD(session_data, column_names, file_format="xlsx"):
         with pd.ExcelWriter(file_stream, engine='openpyxl') as writer:
             df.to_excel(writer, index=False)
         mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        filename = "experiment_behavior_log.xlsx"
+        filename = 'Rat_' + datetime.now().strftime("%m-%d-%y")#"experiment_behavior_log.xlsx"
         
     else:  # Fallback seamlessly to standard CSV format 
         text_stream = io.StringIO()

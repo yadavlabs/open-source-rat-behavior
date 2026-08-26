@@ -17,7 +17,7 @@
 
 # Native Python imports
 import ripple_thread_functions
-from flask import Flask, request, Response, jsonify, send_file
+from flask import Flask, request, Response, jsonify, send_file, make_response
 import flask
 from flask_cors import CORS
 import serial
@@ -514,26 +514,47 @@ def WriteToCOMport():
 
 @app.route("/saveSessionDataRoute", methods=["POST"])
 def save_session_data_endpoint():
-    try:
-        # Accept variable parameter payloads from Angular click handlers (e.g. {"format": "xlsx"})
-        request_payload = request.json or {}
-        selected_format = request_payload.get("format", "xlsx")
-        
-        # Invoke your updated helper function directly using your existing session arrays
-        file_stream, mimetype, filename = saveSessionDataD(ard_manager.session_data, ard_manager.column_names)
-        
-        # Package and dispatch the file attachment payload instantly across the HTTP bridge
-        return send_file(
-            file_stream,
-            mimetype=mimetype,
-            as_attachment=True,
-            download_name=filename
-        )
-    except Exception as e:
-        print(f"[Flask Server Error] Save session action failed: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+	try:
+		# Accept variable parameter payloads from Angular click handlers (e.g. {"format": "xlsx"})
+		request_payload = request.json or {}
+		selected_format = request_payload.get("format", "xlsx")
 		
+
+		# Invoke your updated helper function directly using your existing session arrays
+		file_stream, mimetype, filename = saveSessionDataD(ard_manager.session_data, ard_manager.column_names)
+		print(filename)
+		print(mimetype)
+		# Package and dispatch the file attachment payload instantly across the HTTP bridge
+		response = make_response(send_file(
+			file_stream,
+			mimetype=mimetype,
+			as_attachment=True,
+			download_name=filename
+		))
+		response.headers["content-disposition"] = f"attachment; filename={filename}"
+		return response
 	
+	except Exception as e:
+		print(f"[Flask] Error. Save session action failed: {e}")
+		return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/download', methods=['get'])
+def download_session_data():
+	#request_payload = request.json or {}
+	#selected_format = request_payload.get("format", "xlsx")
+	selected_format = request.args.get('format', 'xlsx')
+
+	file_stream, mimetype, filename = saveSessionDataD(ard_manager.session_data, ard_manager.column_names, file_format=selected_format)
+
+	response = make_response(send_file(
+		file_stream,
+		mimetype=mimetype,
+		as_attachment=True,
+		download_name='/'
+	))
+	print(ard_manager.column_names)
+	response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+	return response
 
 """
 	View Function 4:

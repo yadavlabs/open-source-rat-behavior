@@ -1,6 +1,6 @@
 // Importing modules
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 // Importing services
@@ -196,5 +196,14 @@ export class FlaskService {
       { responseType: 'blob' }
     );
   }
+
+  downloadSessionFile2(format: string): Observable<HttpResponse<Blob>> {
+    return this.http.get(`${this.baseUrl}/download?format=${format}`, {
+    responseType: 'blob',
+    observe: 'response' // <--- Crucial: Tells Angular to grab the HTTP headers too
+    });
+  }
+
+  
 
 }
