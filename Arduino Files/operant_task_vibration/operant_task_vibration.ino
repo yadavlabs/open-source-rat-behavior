@@ -39,8 +39,8 @@ unsigned long responseT;
 unsigned long runTime =  3600000; //length of session (msec)
 unsigned long responseTime = 10000; //unforced trial response time (msec)
 unsigned int unresponsive = 0; //initialize check for non-response trial
-int delayL = 21;//29;//28;//30;//15; //left water reward time (msec)
-int delayR = 23;//27;//13; // right water reward time (msec) 
+int delayL = 22;//29;//28;//30;//15; //left water reward time (msec)
+int delayR = 26;//27;//13; // right water reward time (msec) 
 int readDelay = 10; //delay between reading matlab serial port data (msec)
 
 int vibrationLevelL = 150; // value between 0 and 255 for level of vibration (left port, for discrimination)

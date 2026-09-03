@@ -359,7 +359,7 @@ def ArduinoSetUpFunctions():
 			if not task_params:
 				ard_manager.serial_queue.put("Load cancelled.")
 			else:
-				#ard_manager.task_params = task_params
+				ard_manager.task_params = task_params
 				print(task_params)
 
 		elif paramType == "export":
@@ -383,7 +383,13 @@ def WriteToCOMport():
 
 		component = request.form["string"] #checks the button/switch that was pressed
 		state = request.form["butState"] #checks state, "true" or "false" for switches or "N/A" for buttons
-		ard_manager.send_command(component, state)
+		if (component == "randomize"):
+			print(component)
+			print(state)
+			ard_manager.stim_params["randomize"] = 1 if state == "true" else 0
+			print(ard_manager.stim_params["randomize"])
+		else:
+			ard_manager.send_command(component, state)
 		'''
 		if component == "start": #start button was pressed
 			
