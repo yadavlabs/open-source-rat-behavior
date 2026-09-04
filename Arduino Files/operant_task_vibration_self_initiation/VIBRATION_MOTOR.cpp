@@ -65,7 +65,7 @@ void VIBRATION_MOTOR::OFF(){
   runningState = 0;
 }
 
-unsigned long VIBRATION_MOTOR::getRunTime(){
+int VIBRATION_MOTOR::getRunTime(){
   _runTime = millis() - _startRun;
   return _runTime;
 }

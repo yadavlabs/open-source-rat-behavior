@@ -44,8 +44,8 @@ unsigned int initiationTime = 10000; //time allowed for rat to initiate trial by
 unsigned int initiationHoldTime = 500; //length of time rat must nose-poke to initiate trial (msec)
 unsigned int startStimDelay = 300; //delay to deliver stimulus once initiation nose-poke is made (msec)
 int stimStartCheck = 0; //flag to indicate whether stimulus was started
-unsigned long initiateWait = 0.0 //initialize zero point for trial initiation
-unsigned long initiateHoldWait = 0.0 //initialize zero point for holding nose-poke for trial initiation
+unsigned long initiateWait = 0.0; //initialize zero point for trial initiation
+unsigned long initiateHoldWait = 0.0; //initialize zero point for holding nose-poke for trial initiation
 unsigned long initiateT;
 //unsigned int unresponsive = 0; //initialize check for non-response trial
 int delayL = 21;//29;//28;//30;//15; //left water reward time (msec)
@@ -58,7 +58,8 @@ int vibrationLevelR = 100; // value between 0 and 255 for level of vibration (ri
 int vibrationLength = 2000; // length of vibration stimulus (msec)
 
 unsigned int b = 0; //tell if loop was broken
-unsigned int holdSuccess = 0 //flag for rat making trial-initiation nose-poke for initiateHoldTime msec
+unsigned int holdSuccess = 0; //flag for rat making trial-initiation nose-poke for initiateHoldTime msec
+unsigned int trialInitType = 1; // initiation success (1), initiation failue (0), initiation timeout (5)
 
 int maxE = 1; //consecutive error
 int fcheck = 1; //setting for forced and repeated trials (1 for forced and repeat, 0 for no forced or repeat)
@@ -76,7 +77,7 @@ int E = 0; //consequtive incorrect responses
 int F = 0; //forced trial 
 int n = 1; // trial number
 float P = 0.0;
-int A = 0; //trial type for saving data (1,2)
+int A = 0; //flag for determining which doors to open for the current trial
 int B = 0; //left (1), right (2) or unresponsive (5) beam break;
 int M = 0; //forced (1) or unforced (0) trial
 
@@ -142,10 +143,11 @@ void loop() {
     }
     else{
      Serial.println("Left Port Trial");
+     A = 3;
      //house_light.ON();
      //stim(A);
      
-     right_door.OPEN();
+     //right_door.OPEN();
      //delay(5);
      //left_door.OPEN();
     }
@@ -154,12 +156,14 @@ void loop() {
     A = 2;
     if(E == maxE && fcheck == 1){
       Serial.println("Forced Right Trial");
+      A = 2;
       //house_light.ON();
       //stim(A);
       //right_door.OPEN();
     }
     else{
       Serial.println("Right Port Trial");
+      A = 3;
       //house_light.ON();
       //stim(A);
       //right_door.OPEN();
@@ -169,6 +173,7 @@ void loop() {
   }
 
   //---------------Trial Initiation-----------------------------------//
+  holdSuccess = 0;
   house_light.ON();
   initiateWait = millis();
   while(digitalRead(senI) == HIGH && millis()-initiateWait <= initiationTime) { //timer for initiating trial
@@ -176,30 +181,30 @@ void loop() {
   }
   
   senStateI = digitalRead(senI);
-  initiateT = millis();
-
+  initiateT = millis() - initiateWait;
+  
   if (senStateI == LOW){ //rat poked trial-initiation port
     initiateHoldWait = millis();
     holdSuccess = 1;
     stimStartCheck = 0;
     while (millis() - initiateHoldWait <= initiationHoldTime){ // time holding nose-poke
-      if (difigtalRead(senStateI) == HIGH) { // rat removed nose
+      if (digitalRead(senI) == HIGH) { // rat removed nose
         holdSuccess = 0;
         break;
       }
-      if (millis() - initiateHoldWait >= stimStartTime && stimStartCheck == 0){
+      if (millis() - initiateHoldWait >= startStimDelay && stimStartCheck == 0){
         Serial.print("Stim,");
         Serial.println(setTrial);
         if(dcheck == 0 && acheck == 1){ // detection
-          if(stimType == 1){
+          if(setTrial == 1){
             vibration_stimulus.ON();//playTone(toneDurationL);
           }
         }
         else if(dcheck == 1 && acheck == 1){ //discrimination
-          if(stimType == 1){ //left port stim
+          if(setTrial == 1){ //left port stim
           // playTone(toneDurationL);
           }
-          else if(stimType == 2){ //right port stim
+          else if(setTrial == 2){ //right port stim
             //playTone(toneDurationR);
           }
         }
@@ -212,186 +217,197 @@ void loop() {
 
 
     if (holdSuccess){ //successfully poke long enough to initiate trial
-      opendoors
+      trialInitType = 1;
+      handleOpenDoors(A);
       //while (vibration_motor.getRunTime() <= vibrationLength){
 
       //}
       //vibration_motor.OFF();
+      
     }
     else{ //trial initialization failure (rat didn't nose-poke long enough)
+      trialInitType = 0;
       if (vibration_stimulus.isRunning()){
         vibration_stimulus.OFF();
       }
     }
   }
   else { // trial initialization timeout
-
+    trialInitType = 5;
   }
+
+  Serial.print("Initialization,");
+  Serial.print(initiateT);
+  Serial.print(",");
+  Serial.println(trialInitType);
+
+
 
  
   
-  
+  if (holdSuccess){
 //------------------------WAIT FOR SENSOR INPUT--------------
-  startWait = millis();
-  Serial.println("Wait for Response");
+    startWait = millis();
+    Serial.println("Wait for Response");
 
-//--------------------------FORCED TRIAL---------------------
-  if(E == maxE && fcheck == 1){
-    F++;
-    if(setTrial == 1){
+  //--------------------------FORCED TRIAL---------------------
+    if(E == maxE && fcheck == 1){
+      F++;
+      if(setTrial == 1){
 
 
-      while(digitalRead(senL) == HIGH && b == 0){
-        handleVibrationStimulus();
-          if(Serial.available() > 0){
-            manualControl();
+        while(digitalRead(senL) == HIGH && b == 0){
+          handleVibrationStimulus();
+            if(Serial.available() > 0){
+              manualControl();
+            }
+          if(millis()-startSession > runTime){
+            b = 1;
+            break;
+          };
+        }
+        stopVibrationSafe();
+        responseT = millis();
+        if(b == 1){
+          T = L + R;
+          N = L + R + U;
+          P = C/(T-F);
+          left_door.CLOSE();
+          house_light.OFF();
+          endSession();
+        }
+        Serial.print("Response,");
+        Serial.print(responseT-startWait);
+        Serial.print(",");
+        Serial.print(setTrial);
+        Serial.println(",5");
+        left_spout.deliverReward();
+        shortTone();
+        L++;
+        B = 1;
+        E = 0;
+        delay(500);
+        delay(5500);
+        left_door.CLOSE();    //close door
+      }
+      else if(setTrial == 2){
+      
+        while(digitalRead(senR) == HIGH && b == 0){
+          handleVibrationStimulus();
+            if(Serial.available() > 0){
+              manualControl();
+            }
+          if(millis()-startSession > runTime){
+            b = 1;
+            break;
           }
-        if(millis()-startSession > runTime){
-          b = 1;
-          break;
-        };
+        }
+        stopVibrationSafe();
+        responseT = millis();
+        if(b == 1){
+          T = L + R;
+          N = L + R + U;
+          P = C/(T-F);
+          right_door.CLOSE();
+          house_light.OFF();
+          endSession();
+        }
+        Serial.print("Response,");
+        Serial.print(responseT-startWait);
+        Serial.print(",");
+        Serial.print(setTrial);
+        Serial.println(",5");
+        right_spout.deliverReward();
+        shortTone();
+        R++;
+        B = 2;
+        E = 0;
+        delay(500);
+        delay(5500);
+        right_door.CLOSE();     //close door  
+      }
+    }
+    
+  //--------------------------UNFORCED TRIAL------------------------
+    else{
+
+      while(digitalRead(senL) == HIGH && digitalRead(senR) == HIGH && millis()-startWait <= responseTime){
+        handleVibrationStimulus();
       }
       stopVibrationSafe();
       responseT = millis();
-      if(b == 1){
-        T = L + R;
-        N = L + R + U;
-        P = C/(T-F);
-        left_door.CLOSE();
-        house_light.OFF();
-        endSession();
-      }
-      Serial.print("Response,");
-      Serial.print(responseT-startWait);
-      Serial.print(",");
-      Serial.print(setTrial);
-      Serial.println(",5");
-      left_spout.deliverReward();
-      shortTone();
-      L++;
-      B = 1;
-      E = 0;
-      delay(500);
-      delay(5500);
-      left_door.CLOSE();    //close door
-    }
-    else if(setTrial == 2){
-    
-      while(digitalRead(senR) == HIGH && b == 0){
-        handleVibrationStimulus();
-          if(Serial.available() > 0){
-            manualControl();
+      senStateL = digitalRead(senL);
+      senStateR = digitalRead(senR);
+      
+      if(senStateL == LOW){
+        B = 1;
+        Serial.print("Response,");
+        Serial.print(responseT-startWait);
+        Serial.print(",");
+        Serial.print(B);
+        if(setTrial == 1){
+          left_spout.deliverReward();//deliverReward(solL);
+          shortTone();
+          L++;
+          C++;
+          Serial.println(",1");
+          E = 0;
+          delay(4000);
+        }
+        else{
+          longTone();
+          L++;
+          I++;
+          if(fcheck == 1){
+            E++;
           }
-        if(millis()-startSession > runTime){
-          b = 1;
-          break;
+          Serial.println(",0");
         }
       }
-      stopVibrationSafe();
-      responseT = millis();
-      if(b == 1){
-        T = L + R;
-        N = L + R + U;
-        P = C/(T-F);
-        right_door.CLOSE();
-        house_light.OFF();
-        endSession();
-      }
-      Serial.print("Response,");
-      Serial.print(responseT-startWait);
-      Serial.print(",");
-      Serial.print(setTrial);
-      Serial.println(",5");
-      right_spout.deliverReward();
-      shortTone();
-      R++;
-      B = 2;
-      E = 0;
-      delay(500);
-      delay(5500);
-      right_door.CLOSE();     //close door  
-    }
-  }
-  
-//--------------------------UNFORCED TRIAL------------------------
-  else{
+      else if(senStateR == LOW){
+        B = 2;
+        Serial.print("Response,");
+        Serial.print(responseT-startWait);
+        Serial.print(",");
+        Serial.print(B);
 
-    while(digitalRead(senL) == HIGH && digitalRead(senR) == HIGH && millis()-startWait <= responseTime){
-      handleVibrationStimulus();
-    }
-    stopVibrationSafe();
-    responseT = millis();
-    senStateL = digitalRead(senL);
-    senStateR = digitalRead(senR);
-    
-    if(senStateL == LOW){
-      B = 1;
-      Serial.print("Response,");
-      Serial.print(responseT-startWait);
-      Serial.print(",");
-      Serial.print(B);
-      if(setTrial == 1){
-        left_spout.deliverReward();//deliverReward(solL);
-        shortTone();
-        L++;
-        C++;
-        Serial.println(",1");
-        E = 0;
-        delay(4000);
+        if(setTrial == 1){
+          longTone();
+          R++;
+          I++;
+          if(fcheck == 1){
+            E++;
+          }
+          Serial.println(",0");
+        }
+        else{
+          right_spout.deliverReward();//deliverReward(solR);
+          shortTone();
+          R++;
+          C++;
+          Serial.println(",1");
+          E = 0;
+          delay(4000);
+        }
       }
-      else{
+    else{
+        B = 5;
+        Serial.print("Response,");
+        Serial.print(responseT-startWait);
+        Serial.print(",");
+        Serial.print(B);
+        Serial.println(",5");
         longTone();
-        L++;
-        I++;
+        //unresponsive = 0;
+        U++;
         if(fcheck == 1){
           E++;
         }
-        Serial.println(",0");
       }
+      delay(1000);
+      left_door.CLOSE();//digitalWrite(doorR,HIGH);
+      right_door.CLOSE();//digitalWrite(doorL,HIGH);
     }
-    else if(senStateR == LOW){
-      B = 2;
-      Serial.print("Response,");
-      Serial.print(responseT-startWait);
-      Serial.print(",");
-      Serial.print(B);
-
-      if(setTrial == 1){
-        longTone();
-        R++;
-        I++;
-        if(fcheck == 1){
-          E++;
-        }
-        Serial.println(",0");
-      }
-      else{
-        right_spout.deliverReward();//deliverReward(solR);
-        shortTone();
-        R++;
-        C++;
-        Serial.println(",1");
-        E = 0;
-        delay(4000);
-      }
-    }
-  else{
-      B = 5;
-      Serial.print("Response,");
-      Serial.print(responseT-startWait);
-      Serial.print(",");
-      Serial.print(B);
-      Serial.println(",5");
-      longTone();
-      //unresponsive = 0;
-      U++;
-      if(fcheck == 1){
-        E++;
-      }
-    }
-    delay(1000);
-    left_door.CLOSE();//digitalWrite(doorR,HIGH);
-    right_door.CLOSE();//digitalWrite(doorL,HIGH);
   }
 
 
@@ -562,6 +578,7 @@ void setPINS(){
   //pinMode(solR,OUTPUT);
   pinMode(senL,INPUT_PULLUP);
   pinMode(senR,INPUT_PULLUP);
+  pinMode(senI, INPUT_PULLUP);
   pinMode(toneHF,OUTPUT);
   //pinMode(light,OUTPUT);
   //digitalWrite(doorR,LOW);
@@ -1135,16 +1152,31 @@ void manualControl(){
 
 void handleVibrationStimulus(){
   if (vibration_stimulus.isRunning()){
-    if (vibration_motor.getRunTime() >= vibrationLength){
-      vibration_motor.OFF();
+    if (vibration_stimulus.getRunTime() >= vibrationLength){
+      vibration_stimulus.OFF();
     }
   }
 }
 
 void stopVibrationSafe(){
-  if (vibrtaion_stimulus.isRunning()){
-    vibration_motor.OFF();
+  if (vibration_stimulus.isRunning()){
+    vibration_stimulus.OFF();
   }
+}
+
+void handleOpenDoors(int trialType){
+
+  if (trialType == 1){
+    left_door.OPEN();
+  }
+  else if (trialType == 2){
+    right_door.OPEN();
+  }
+  else if (trialType == 3){
+    left_door.OPEN();
+    right_door.OPEN();
+  }
+
 }
 
 /*void handleCommands(){

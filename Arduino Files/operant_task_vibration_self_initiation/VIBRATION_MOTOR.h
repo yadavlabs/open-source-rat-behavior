@@ -14,7 +14,7 @@ public:
     void RUN();
     void ON();
     void OFF();
-    unsigned long getRunTime();
+    int getRunTime();
     byte isRunning();
 
 private:
@@ -23,7 +23,7 @@ private:
     int _pwmVal; //value between 0 and 255 for pwm
     int _delayVal; //value for length of vibration (msec)
     unsigned long _startRun;
-    unsigned long _runTime; //timer for timing time between a use of ON() and OFF()
+    int _runTime; //timer for timing time between a use of ON() and OFF()
     byte runningState;
 
 };
