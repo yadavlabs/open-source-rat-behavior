@@ -10,7 +10,7 @@
 //char commandBuffer[COMMAND_BUFFER_SIZE];
 
 //contant and variable intializations
-const long baudrate = 9600;
+const int baudrate = 9600;
 const int doorR = 4; //right door (output)
 const int doorL = 5; //left door (output)
 const int solR = 2; //right solenoid (output)
@@ -20,9 +20,9 @@ const int toneHF = 7; //3.5kHz tone (output)
 const int lightPin = 6; //houselight (output)
 const int senR = 9; //right sensor (input)
 const int senL = 8; //left sensor (input)
-const int senI = 12; //sensor for trial-initation port (input) -> may need to change pin
+const int senI = A0; //sensor for trial-initation port (input) -> may need to change pin
 
-const int vbmPin = 10; //vibration motor pin (output, must be pwm)
+const int vbmPin = A1; //vibration motor pin (output, must be pwm)
 
 DOOR right_door(doorR); //door class for right door
 DOOR left_door(doorL); //door class for left door
@@ -48,8 +48,8 @@ unsigned long initiateWait = 0.0; //initialize zero point for trial initiation
 unsigned long initiateHoldWait = 0.0; //initialize zero point for holding nose-poke for trial initiation
 unsigned long initiateT;
 //unsigned int unresponsive = 0; //initialize check for non-response trial
-int delayL = 21;//29;//28;//30;//15; //left water reward time (msec)
-int delayR = 23;//27;//13; // right water reward time (msec) 
+int delayL = 30;//29;//28;//30;//15; //left water reward time (msec)
+int delayR = 36;//27;//13; // right water reward time (msec) 
 int readDelay = 10; //delay between reading matlab serial port data (msec)
 
 int vibrationLevelL = 150; // value between 0 and 255 for level of vibration (left port, for discrimination)
@@ -65,8 +65,9 @@ int maxE = 1; //consecutive error
 int fcheck = 1; //setting for forced and repeated trials (1 for forced and repeat, 0 for no forced or repeat)
 int acheck = 1; //setting for alternating port session (1 for port randomizing, 2 for initial training/alternating ports)
 int dcheck = 0; //setting for auditory detection (0) or discrimination (1)
+int icheck = 1; //setting for enabling (1) or disabling (0) trial self-initiation
 //event counters
-int U = 0; //number of non-responses
+uint8_t U = 0; //number of non-responses
 int R = 0; //number of right port responses
 int L = 0; //number of left port responses
 int T = 0; //total responses (L+R)
@@ -173,6 +174,7 @@ void loop() {
   }
 
   //---------------Trial Initiation-----------------------------------//
+  if (icheck == 1){
   holdSuccess = 0;
   house_light.ON();
   initiateWait = millis();
@@ -219,24 +221,49 @@ void loop() {
     if (holdSuccess){ //successfully poke long enough to initiate trial
       trialInitType = 1;
       handleOpenDoors(A);
-      //while (vibration_motor.getRunTime() <= vibrationLength){
-
-      //}
-      //vibration_motor.OFF();
       
     }
-    else{ //trial initialization failure (rat didn't nose-poke long enough)
+    else{ //trial initiation failure (rat didn't nose-poke long enough)
       trialInitType = 0;
       if (vibration_stimulus.isRunning()){
         vibration_stimulus.OFF();
       }
+      longTone();
     }
   }
-  else { // trial initialization timeout
+  else { // trial initiation timeout
     trialInitType = 5;
+    longTone();
+    
   }
-
-  Serial.print("Initialization,");
+  }
+  else {
+    initiateT = 0;
+    delay(1000);
+    Serial.print("Stim,");
+    Serial.println(setTrial);
+    if(dcheck == 0 && acheck == 1){ // detection
+      if(setTrial == 1){
+        vibration_stimulus.RUN();//playTone(toneDurationL);
+      }
+      else{
+        delay(vibrationLength);
+      }
+    }
+    else if(dcheck == 1 && acheck == 1){ //discrimination
+      if(setTrial == 1){ //left port stim
+      // playTone(toneDurationL);
+      }
+      else if(setTrial == 2){ //right port stim
+        //playTone(toneDurationR);
+      }
+    }
+    trialInitType = 1;
+    holdSuccess = 1;
+    handleOpenDoors(A);
+}  
+  
+  Serial.print("Initiation,");
   Serial.print(initiateT);
   Serial.print(",");
   Serial.println(trialInitType);
@@ -670,6 +697,7 @@ void manualControl(){
   //volatile unsigned long pt0;
   Serial.println("Wait");
       while(ch == 0){
+        handleVibrationStimulus();
         if(Serial.available() > 0){
           int fbyte = Serial.read();
           switch(fbyte){
@@ -681,7 +709,6 @@ void manualControl(){
               right_spout.OFF();
               house_light.OFF();
               Serial.println("Begin");
-              serial_flush_buffer();
               ch = 1;
               break;  
             }         
@@ -1045,12 +1072,51 @@ void manualControl(){
                   Serial.print(vibrationLength);
                   Serial.println("msec.");
                   break;
-                  
-                
-                  
+
+                                    
               }
               break;
               
+            }
+            case 'I': {
+              delay(readDelay);
+              uint8_t i_select;
+              i_select = Serial.read();
+              //Serial.print("Here ");
+              //Serial.println(p_select);
+              delay(readDelay);
+              Serial.print("SET,");
+              switch(i_select){
+                case '1': //enable (I11)/disable (I10) trial self-initiation
+                  icheck = Serial.parseInt();
+                  icheck = constrain(icheck, 0, 1);
+                  Serial.print("trial_initiation,");
+                  Serial.println(icheck ? "Enabled" : "Disabled");
+                  break;
+
+                 case '2': //set initiation timeout length (ex: I210 sets timeout to 10 seconds)
+                  initiationTime = Serial.parseInt() * 1000;
+                  Serial.print("initiation_timeout,");
+                  Serial.print(initiationTime/1000);
+                  Serial.println("sec");
+                  break;
+
+                 case '3': //set initiation hold time (ex: I3500 sets hold time to 500ms)
+                  initiationHoldTime = Serial.parseInt();
+                  Serial.print("initiation_hold_time,");
+                  Serial.print(initiationHoldTime);
+                  Serial.println("msec");
+                  break;
+
+                 case '4': //set delay for starting stimulus during initiation hold (ex: I4200 sets delay to 200ms)
+                  startStimDelay = Serial.parseInt();
+                  Serial.print("start_stimulus_delay,");
+                  Serial.print(startStimDelay);
+                  Serial.println("msec");
+                  break;
+
+              }
+              break;
             }
             case 'G': {//get various parameters and session data
               delay(readDelay);
@@ -1125,6 +1191,37 @@ void manualControl(){
               }
               break;
             }
+            case 'g': {//get trial self-initiation parameters
+              delay(readDelay);
+              uint8_t g_select;
+              g_select = Serial.read();
+              Serial.print("GET,");
+              switch(g_select){
+                case '1': 
+                  Serial.print("trial_initiation,");
+                  Serial.println(icheck ? "Yes" : "No");
+                  break;
+
+                 case '2':
+                  Serial.print("initiation_timeout,");
+                  Serial.println(initiationTime / 1000);
+                  break;
+
+                 case '3':
+                  Serial.print("initiation_hold_time,");
+                  Serial.println(initiationHoldTime);
+                  break;
+
+                 case '4':
+                  Serial.print("start_stimulus_delay,");
+                  Serial.println(startStimDelay);
+                  break;
+                  
+              }
+              break;
+                
+              }
+              
             case 'p': {
               //pt0 = millis();
               Serial.println("Paused");

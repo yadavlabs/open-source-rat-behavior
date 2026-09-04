@@ -10,7 +10,11 @@ session_params_vibration = {
         "session_length": "60",
         "response_time": "10",
         "forced_trials": "Yes",
-        "consecutive_error": "3"
+        "consecutive_error": "3",
+        "trial_initiation": "Yes",
+        "initiation_timeout": "10",
+        "initiation_hold_time": "1000",
+        "start_stimulus_delay": "500"
 }
 stim_params_vibration = {
 	"vibration_levelL": "150",
@@ -42,6 +46,8 @@ session_data_vibration = { #uses integers and/or floats (not strings) to populat
         "trial_time":[],
         "trial_number":[],
         "trial_type":[],
+        "initiation_time":[],
+        "initiation_type":[],
         "forced":[],
         "vibration_level":[],
         "vibration_length":[],
@@ -55,6 +61,8 @@ column_names_vibration = [
     'Time (sec)',
     'Trial',
     'Type',
+    'Initiation Time (sec)',
+    'Initiation Type',
     'Forced',
     'Vibration Level',
     'Vibration Length (ms)',
@@ -187,7 +195,21 @@ def handle_data_vibration(self, line):
                 #play_pure_tone(frequency=11300, duration=float(self.stim_params["tone_durationR"])/1000, amplitude=0.5)
                 self.serial_queue.put("Right port stim")
                 
-                    
+    elif data[0] == "Initiation":
+        init_time = int(data[1]) / 1000
+        if data[2] == "1":
+            init_type = "Trial initiated"
+        elif data[2] == "0":
+            init_type = "Initiation failure"
+        elif data[2] == "5":
+            init_type = "Initiation timeout"
+        print("[Arduino] Trial Initiation Time: " + str(init_time) + "sec, Initiation Type: " + init_type)
+        self.serial_queue.put("Trial Initiation Time: " + str(init_time) + "sec, Initiation Type: " + init_type)
+        #self.current_trial_data["initiation_time"] = str(init_time)
+        #self.current_trial_data["initiation_type"] = init_type
+        self.session_data["initiation_time"].append(init_time)
+        self.session_data["initiation_type"].append(int(data[2]))
+
     elif data[0] == "Response":
         res_time = int(data[1]) / 1000
         if data[3] == "1":

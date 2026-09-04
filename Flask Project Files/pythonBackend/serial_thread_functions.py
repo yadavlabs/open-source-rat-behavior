@@ -37,7 +37,11 @@ GET_PARAM_MAP = {
     "experiment_type": "G6",
     "vibration_levelL": "G7",
     "vibration_levelR": "G8",
-    "vibration_length": "G9"
+    "vibration_length": "G9",
+    "trial_initiation": "g1",
+    "initiation_timeout": "g2",
+    "initiation_hold_time": "g3",
+    "start_stimulus_delay": "g4"
 }
 
 # dictionary of "SET" commands for setting/changing parameters on the Arduino
@@ -50,7 +54,11 @@ SET_PARAM_MAP = {
     "experiment_type": lambda new_val: f"P6{int(new_val == 'Discrimination')}",
     "vibration_levelL": lambda new_val: f"P7{new_val}",
     "vibration_levelR": lambda new_val: f"P8{new_val}",
-    "vibration_length": lambda new_val: f"P9{new_val}"
+    "vibration_length": lambda new_val: f"P9{new_val}",
+    "trial_initiation": lambda new_val: f"I1{int(new_val == 'Yes')}",
+    "initiation_timeout": lambda new_val: f"I2{new_val}",
+    "initiation_hold_time": lambda new_val: f"I3{new_val}",
+    "start_stimulus_delay": lambda new_val: f"I4{new_val}"
 }
 
 #finds and returns devices ocnnected to serial port
